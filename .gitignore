@@ -221,3 +221,7 @@ __marimo__/
 !frontend/src/lib/
 node_modules/
 .next/
+
+# Local agent notes and working docs (never committed)
+CLAUDE.md
+docs/

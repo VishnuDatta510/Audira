@@ -99,7 +99,7 @@ function SignInForm() {
               </div>
               <Field label="Name">{(id) => <Input id={id} value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" />}</Field>
               {accountRole === "admin" && (
-                <Field label="Interviewer access code" hint="Ask whoever runs this BNB server for the code.">
+                <Field label="Interviewer access code" hint="Ask whoever runs this Audira workspace for the code.">
                   {(id) => <Input id={id} value={accessCode} onChange={(e) => setAccessCode(e.target.value)} autoComplete="off" />}
                 </Field>
               )}

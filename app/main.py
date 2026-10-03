@@ -9,7 +9,7 @@ from app.core.config import browser_origins, settings
 from app.services.agent import AgentUnavailable
 from app.services.repository import repository
 
-logger = logging.getLogger("bnb")
+logger = logging.getLogger("audira")
 
 
 @asynccontextmanager
@@ -23,7 +23,7 @@ async def lifespan(_: FastAPI):
     yield
 
 
-app = FastAPI(title="BNB AI Interview Coach", version="0.3.0", lifespan=lifespan)
+app = FastAPI(title="Audira API", version="0.3.0", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=browser_origins(),
@@ -43,7 +43,7 @@ def agent_unavailable(_: Request, exc: AgentUnavailable):
 
 @app.get("/")
 def root():
-    return {"service": "BNB AI Interview Coach API", "docs": "/docs", "frontend": settings.frontend_url, "health": "/health"}
+    return {"service": "Audira API", "docs": "/docs", "frontend": settings.frontend_url, "health": "/health"}
 
 
 @app.get("/health")

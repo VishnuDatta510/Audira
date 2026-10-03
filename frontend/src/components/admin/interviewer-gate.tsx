@@ -21,7 +21,7 @@ export function InterviewerGate({ next }: { next: string }) {
       <p className="mt-2 max-w-md text-sm leading-relaxed text-ink-2">
         {user
           ? `You are signed in as a candidate (${user.email}). Sign out, then sign in with an interviewer account or create one with the access code.`
-          : "Sign in with an interviewer account. Creating one needs the access code from whoever runs this BNB server."}
+          : "Sign in with an interviewer account. Creating one needs the access code from whoever runs this Audira workspace."}
       </p>
       {user ? (
         <Button className="mt-6" onClick={switchAccount}>

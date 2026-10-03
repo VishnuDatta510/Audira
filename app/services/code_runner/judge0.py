@@ -48,7 +48,7 @@ class Judge0Executor:
         self.api_key = api_key
 
     def _headers(self) -> dict[str, str]:
-        headers = {"Content-Type": "application/json", "Accept": "application/json", "User-Agent": "build-n-pray/1.0"}
+        headers = {"Content-Type": "application/json", "Accept": "application/json", "User-Agent": "audira/1.0"}
         if self.api_key:
             host = urllib.parse.urlparse(self.base_url).hostname or ""
             if host.endswith("rapidapi.com"):

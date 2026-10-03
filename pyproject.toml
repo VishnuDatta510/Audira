@@ -2,7 +2,7 @@
 package = false
 
 [project]
-name = "bnb"
+name = "audira"
 version = "0.1.0"
 description = "AI interview coach with DSA assessment and transparent proctoring"
 readme = "README.md"

@@ -3,7 +3,7 @@ services:
   # 1. The FastAPI Backend (Docker)
   # ---------------------------------
   - type: web
-    name: bnb-backend
+    name: audira-backend
     env: docker
     dockerfilePath: ./Dockerfile
     plan: free
@@ -27,14 +27,14 @@ services:
       - key: FRONTEND_URL
         fromService:
           type: web
-          name: bnb-frontend
+          name: audira-frontend
           envVarKey: RENDER_EXTERNAL_URL
 
   # ---------------------------------
   # 2. The Next.js Frontend (Node)
   # ---------------------------------
   - type: web
-    name: bnb-frontend
+    name: audira-frontend
     env: node
     rootDir: frontend
     buildCommand: npm install && npm run build
@@ -45,5 +45,5 @@ services:
       - key: NEXT_PUBLIC_API_URL
         fromService:
           type: web
-          name: bnb-backend
+          name: audira-backend
           envVarKey: RENDER_EXTERNAL_URL

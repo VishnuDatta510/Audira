@@ -3,56 +3,63 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  --bg: #f3f5f7;
+  --bg: #f2f4f3;
   --surface: #ffffff;
-  --surface-2: #eceff3;
-  --ink: #17202c;
-  --ink-2: #4a5565;
-  --ink-3: #7b8594;
-  --line: #dde2e8;
-  --line-strong: #c7ced7;
-  --accent: #1f6b57;
-  --accent-hover: #185646;
+  --surface-2: #ebefed;
+  --ink: #142019;
+  --ink-2: #47554d;
+  --ink-3: #75817a;
+  --line: #dbe1dd;
+  --line-strong: #c3ccc6;
+  --accent: #1d6a55;
+  --accent-hover: #165744;
   --accent-ink: #ffffff;
-  --accent-soft: #e2efe9;
-  --amber: #a86a12;
-  --amber-soft: #fbf0dc;
+  --accent-soft: #dfeee7;
+  --accent-glow: color-mix(in oklab, var(--accent) 28%, transparent);
+  --amber: #a5670f;
+  --amber-soft: #fbefd9;
   --danger: #b4403a;
+  --danger-strong: #95302b;
   --danger-soft: #f8e5e3;
-  --field: #123a30;
-  --field-2: #184a3d;
-  --field-ink: #eef5f1;
-  --field-ink-2: #a8c5ba;
-  --field-line: #2c5c4e;
-  --field-mark: #e3a948;
-  --shadow-color: 215 25% 20%;
+  --field: #103a2e;
+  --field-2: #16493b;
+  --field-ink: #eef6f1;
+  --field-ink-2: #a9c8bb;
+  --field-line: #2a5c4d;
+  --field-mark: #e8ad4b;
+  --mark-tile: #103a2e;
+  --mark-ink: #f1f8f4;
+  --shadow-color: 150 25% 14%;
   color-scheme: light;
 }
 
 .dark {
-  --bg: #11161c;
-  --surface: #171d25;
-  --surface-2: #1e252f;
-  --ink: #e6ebf1;
-  --ink-2: #a2adba;
-  --ink-3: #6f7b89;
-  --line: #28313c;
-  --line-strong: #36414e;
-  --accent: #52b596;
-  --accent-hover: #6cc6a9;
-  --accent-ink: #0b1a14;
-  --accent-soft: #19302a;
-  --amber: #e3a948;
-  --amber-soft: #2d2415;
-  --danger: #e87d74;
-  --danger-soft: #341d1c;
-  --field: #0d251f;
-  --field-2: #123129;
-  --field-ink: #e6efe9;
-  --field-ink-2: #92b3a7;
-  --field-line: #214a3e;
-  --field-mark: #e3a948;
-  --shadow-color: 215 40% 3%;
+  --bg: #0d1311;
+  --surface: #141c19;
+  --surface-2: #1b2521;
+  --ink: #e5ede8;
+  --ink-2: #a0b0a7;
+  --ink-3: #6d7d74;
+  --line: #24302b;
+  --line-strong: #33433b;
+  --accent: #55bb98;
+  --accent-hover: #6fcbaa;
+  --accent-ink: #08170f;
+  --accent-soft: #163029;
+  --amber: #e8ad4b;
+  --amber-soft: #2e2414;
+  --danger: #ec8077;
+  --danger-strong: #f59a92;
+  --danger-soft: #361c1b;
+  --field: #0a221b;
+  --field-2: #0f2f25;
+  --field-ink: #e5f0ea;
+  --field-ink-2: #8fb3a5;
+  --field-line: #1d473a;
+  --field-mark: #e8ad4b;
+  --mark-tile: #1d6a55;
+  --mark-ink: #f1f8f4;
+  --shadow-color: 160 40% 2%;
   color-scheme: dark;
 }
 
@@ -72,18 +79,28 @@
   --color-amber: var(--amber);
   --color-amber-soft: var(--amber-soft);
   --color-danger: var(--danger);
+  --color-danger-strong: var(--danger-strong);
   --color-danger-soft: var(--danger-soft);
   --color-field: var(--field);
   --color-field-2: var(--field-2);
   --color-field-ink: var(--field-ink);
   --color-field-ink-2: var(--field-ink-2);
   --color-field-line: var(--field-line);
+  --color-field-mark: var(--field-mark);
   --ease-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-quint: cubic-bezier(0.22, 1, 0.36, 1);
+  /* A soft spring: a small overshoot that settles, for things that are picked up and put down. */
+  --ease-spring: linear(0, 0.009, 0.035 2.1%, 0.141 4.4%, 0.723 12.9%, 0.938 16.7%, 1.017 19.4%, 1.067, 1.099 24.3%, 1.108 26%, 1.104, 1.09 30.6%, 1.035 38.4%, 1.006 45.5%, 0.993 52.4%, 0.996 63.4%, 1.001 80.4%, 1);
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
   --font-display: var(--font-bricolage), var(--font-geist-sans), sans-serif;
-  --shadow-lift: 0 1px 2px hsl(var(--shadow-color) / 0.06), 0 8px 24px -12px hsl(var(--shadow-color) / 0.18);
-  --shadow-float: 0 2px 6px hsl(var(--shadow-color) / 0.08), 0 24px 48px -20px hsl(var(--shadow-color) / 0.35);
+  --shadow-lift: 0 1px 2px hsl(var(--shadow-color) / 0.06), 0 8px 24px -12px hsl(var(--shadow-color) / 0.2);
+  --shadow-float: 0 2px 6px hsl(var(--shadow-color) / 0.08), 0 28px 56px -24px hsl(var(--shadow-color) / 0.38);
+  --shadow-press: 0 1px 1px hsl(var(--shadow-color) / 0.12), 0 4px 12px -6px hsl(var(--shadow-color) / 0.3);
+  --animate-page-in: page-in 640ms var(--ease-expo) both;
+  --animate-rise: rise 700ms var(--ease-expo) both;
+  --animate-pop: pop 520ms var(--ease-spring) both;
+  --animate-shake: shake 420ms var(--ease-quint);
 }
 
 html,
@@ -95,6 +112,7 @@ body {
 html {
   scrollbar-color: var(--line-strong) transparent;
   caret-color: var(--accent);
+  -webkit-tap-highlight-color: transparent;
 }
 
 html:has([data-landing]) {
@@ -107,7 +125,8 @@ body {
 }
 
 ::selection {
-  background: color-mix(in oklab, var(--accent) 22%, transparent);
+  background: color-mix(in oklab, var(--accent) 24%, transparent);
+  color: var(--ink);
 }
 
 :focus-visible {
@@ -115,10 +134,361 @@ body {
   outline-offset: 2px;
 }
 
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--line-strong);
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--ink-3);
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+a {
+  text-underline-offset: 0.22em;
+  text-decoration-thickness: 1px;
+}
+
 .font-display {
   font-family: var(--font-display);
   font-optical-sizing: auto;
   letter-spacing: -0.02em;
+}
+
+/* Every page settles in the same way a transcript line does. The end state is `none` so fixed children keep the viewport. */
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+main {
+  animation: var(--animate-page-in);
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+    filter: blur(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+.rise {
+  animation: var(--animate-rise);
+  animation-delay: calc(var(--i, 0) * 70ms + var(--d, 0ms));
+}
+
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes shake {
+  0%,
+  100% {
+    transform: none;
+  }
+  20% {
+    transform: translateX(-6px);
+  }
+  40% {
+    transform: translateX(5px);
+  }
+  60% {
+    transform: translateX(-3px);
+  }
+  80% {
+    transform: translateX(2px);
+  }
+}
+
+/* Paper grain for the deep green fields, so they read as material rather than a flat fill. */
+.grain {
+  position: relative;
+  isolation: isolate;
+}
+.grain::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.09;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Primary buttons: a band of light crosses once on hover. */
+.btn-sheen {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+.btn-sheen::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  z-index: -1;
+  background: linear-gradient(105deg, transparent 30%, rgb(255 255 255 / 0.22) 47%, rgb(255 255 255 / 0.22) 53%, transparent 70%);
+  transform: translateX(-110%);
+  transition: transform 0s;
+}
+.btn-sheen:hover::before {
+  transform: translateX(110%);
+  transition: transform 900ms var(--ease-expo);
+}
+
+/* Inputs: the label takes the accent while its control has focus. */
+.field:focus-within > label {
+  color: var(--accent);
+}
+
+/* Range slider drawn from the palette; --fill is set from the value. */
+.slider {
+  appearance: none;
+  height: 22px;
+  background: transparent;
+  cursor: pointer;
+}
+.slider::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 999px;
+  background: linear-gradient(to right, var(--accent) 0 var(--fill, 50%), var(--surface-2) var(--fill, 50%) 100%);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.slider::-moz-range-track {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.slider::-moz-range-progress {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--accent);
+}
+.slider::-webkit-slider-thumb {
+  appearance: none;
+  margin-top: -7px;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 2px solid var(--accent);
+  box-shadow: var(--shadow-press);
+  transition:
+    transform 380ms var(--ease-spring),
+    box-shadow 200ms ease;
+}
+.slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 2px solid var(--accent);
+  box-shadow: var(--shadow-press);
+  transition: transform 380ms var(--ease-spring);
+}
+.slider:hover::-webkit-slider-thumb {
+  transform: scale(1.12);
+}
+.slider:active::-webkit-slider-thumb {
+  transform: scale(1.25);
+  box-shadow:
+    0 0 0 6px var(--accent-glow),
+    var(--shadow-press);
+}
+.slider:active::-moz-range-thumb {
+  transform: scale(1.25);
+}
+.slider:focus-visible {
+  outline: none;
+}
+.slider:focus-visible::-webkit-slider-thumb {
+  box-shadow:
+    0 0 0 4px var(--accent-glow),
+    var(--shadow-press);
+}
+
+/* Native dialog: scales up from the centre; the backdrop fades. */
+dialog.sheet {
+  opacity: 0;
+  transform: translateY(12px) scale(0.96);
+  transition:
+    opacity 260ms var(--ease-expo),
+    transform 520ms var(--ease-spring),
+    overlay 260ms allow-discrete,
+    display 260ms allow-discrete;
+}
+dialog.sheet[open] {
+  opacity: 1;
+  transform: none;
+}
+@starting-style {
+  dialog.sheet[open] {
+    opacity: 0;
+    transform: translateY(12px) scale(0.96);
+  }
+}
+dialog.sheet::backdrop {
+  background: color-mix(in oklab, var(--field) 45%, transparent);
+  backdrop-filter: blur(3px);
+  opacity: 0;
+  transition:
+    opacity 300ms ease,
+    overlay 300ms allow-discrete,
+    display 300ms allow-discrete;
+}
+dialog.sheet[open]::backdrop {
+  opacity: 1;
+}
+@starting-style {
+  dialog.sheet[open]::backdrop {
+    opacity: 0;
+  }
+}
+
+/* Theme switch: the new theme opens as a circle from the toggle. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+/* ---------- Audira mark ---------- */
+.mark-tile {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.mark-leg {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+}
+.mark-wave-amp {
+  transform-box: view-box;
+  transform-origin: 16px 19px;
+  transform: scaleY(0.55);
+  transition: transform 600ms var(--ease-spring);
+}
+.mark-wave-run {
+  animation: wave-run 1.6s linear infinite;
+}
+@keyframes wave-run {
+  to {
+    transform: translateX(-4.4px);
+  }
+}
+.mark[data-live="true"] .mark-wave-amp,
+.brand:hover .mark-wave-amp,
+.brand:focus-visible .mark-wave-amp {
+  transform: scaleY(1);
+}
+.mark[data-live="true"] .mark-wave-run,
+.brand:hover .mark-wave-run,
+.brand:focus-visible .mark-wave-run {
+  animation-duration: 0.7s;
+}
+.brand:hover .mark-tile {
+  transform: rotate(-6deg) scale(1.04);
+}
+.mark-tile {
+  transition: transform 520ms var(--ease-spring);
+}
+
+/* Intro: tile pops, legs draw, the voice arrives. */
+.mark[data-intro="true"] .mark-tile {
+  animation: mark-pop 700ms var(--ease-spring) both;
+}
+.mark[data-intro="true"] .mark-leg {
+  animation: mark-draw 760ms var(--ease-expo) 180ms both;
+}
+.mark[data-intro="true"] .mark-wave {
+  animation: mark-voice 900ms var(--ease-spring) 640ms both;
+}
+@keyframes mark-pop {
+  from {
+    transform: scale(0.4) rotate(-24deg);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+@keyframes mark-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes mark-voice {
+  from {
+    opacity: 0;
+    transform: scaleX(0.2);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.mark-wave {
+  transform-box: view-box;
+  transform-origin: 16px 19px;
+}
+
+.wordmark-letter {
+  display: inline-block;
+}
+[data-intro="true"] .wordmark-letter {
+  animation: rise 700ms var(--ease-expo) both;
+  animation-delay: calc(280ms + var(--i, 0) * 45ms);
+}
+
+/* Giant footer wordmark: letters come up out of the baseline. */
+.giant-letter {
+  display: inline-block;
+  transition: transform 1100ms var(--ease-expo);
+  transition-delay: calc(var(--i, 0) * 60ms);
+}
+[data-play="armed"] .giant-letter {
+  transform: translateY(105%);
+}
+.giant-letter:hover {
+  transform: translateY(-6%);
+  transition-duration: 500ms;
+  transition-delay: 0ms;
+  transition-timing-function: var(--ease-spring);
+}
+
+/* Loader: five bars breathing like a voice. */
+.voice-loader span {
+  animation: voice-bar 1s ease-in-out infinite;
+  animation-delay: calc(var(--i, 0) * -140ms);
+  transform-origin: center;
 }
 
 /* Problem statements rendered from markdown */
@@ -161,7 +531,7 @@ body {
 [data-separator] {
   position: relative;
   background: var(--line);
-  transition: background-color 120ms ease;
+  transition: background-color 160ms ease;
 }
 [data-separator="hover"],
 [data-separator="active"],
@@ -183,6 +553,34 @@ body {
 }
 .animate-pulse-dot {
   animation: pulse-dot 1.4s ease-in-out infinite;
+}
+
+/* A ring that keeps leaving a live dot or button, like sound. */
+@keyframes ripple {
+  from {
+    transform: scale(1);
+    opacity: 0.55;
+  }
+  to {
+    transform: scale(2.4);
+    opacity: 0;
+  }
+}
+.ripple {
+  position: relative;
+}
+.ripple::before,
+.ripple::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: currentColor;
+  animation: ripple 1.8s var(--ease-quint) infinite;
+  pointer-events: none;
+}
+.ripple::after {
+  animation-delay: 0.9s;
 }
 
 /* Landing page motion: text resolves the way a live transcript does */
@@ -258,7 +656,7 @@ body {
 }
 .hero-mark {
   background-size: 100% 42%;
-  animation: mark-sweep 1100ms var(--ease-expo) 500ms both;
+  animation: mark-sweep 1100ms var(--ease-expo) 950ms both;
 }
 
 [data-play="armed"] .play-rise {
@@ -337,6 +735,26 @@ body {
   animation-delay: var(--md, 600ms);
 }
 
+/* Spotlight that follows the pointer across interactive rows and cards. */
+.spotlight {
+  position: relative;
+  isolation: isolate;
+}
+.spotlight::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(420px circle at var(--mx, 50%) var(--my, 50%), color-mix(in oklab, var(--accent) 9%, transparent), transparent 60%);
+  transition: opacity 300ms ease;
+}
+.spotlight:hover::before {
+  opacity: 1;
+}
+
 @media (prefers-reduced-motion: reduce) {
   html:has([data-landing]) {
     scroll-behavior: auto;
@@ -345,6 +763,35 @@ body {
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+.draw-check {
+  stroke-dasharray: 1;
+  animation: mark-draw 640ms var(--ease-expo) 120ms both;
+}
+
+/* Score bars grow from the left once, staggered by --d. */
+@keyframes bar-fill {
+  from {
+    transform: scaleX(0);
+  }
+}
+.bar-fill {
+  transform-origin: left;
+  animation: bar-fill 1300ms var(--ease-expo) both;
+  animation-delay: var(--d, 0ms);
+}
+[data-play="armed"] .bar-fill {
+  animation: none;
+  transform: scaleX(0);
+}
+
+/* Hero headline words resolve on load. */
+.hero-word {
+  display: inline-block;
+  animation: transcribe 900ms var(--ease-expo) both;
+  animation-delay: calc(var(--i, 0) * 60ms + 80ms);
 }

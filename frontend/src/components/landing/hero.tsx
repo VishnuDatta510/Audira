@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState, type CSSProperties } from "react";
 import { Mic } from "lucide-react";
 import { HomeActions } from "@/components/home-actions";
 import { heroExchange, type Turn } from "@/components/landing/content";
@@ -42,6 +42,8 @@ function buildFrames(turns: Turn[]): { frames: Frame[]; initial: number; final: 
 }
 
 const TIMELINE = buildFrames(heroExchange);
+
+const HEADLINE = "The technical interview that asks the".split(" ");
 
 function Words({ words, shown, start = 0 }: { words: string[]; shown: number; start?: number }) {
   return words.map((word, i) => (
@@ -158,15 +160,18 @@ function InterviewStage({ frame }: { frame: Frame }) {
             listening ? "bg-amber-soft text-amber" : "border border-line-strong bg-surface text-ink-2",
           )}
         >
-          <Mic className="size-4" />
+          <span className="relative grid place-items-center">
+            {listening && <span className="ripple absolute size-4 rounded-full text-amber/40" />}
+            <Mic className="relative size-4" />
+          </span>
           {listening ? "Stop speaking" : "Speak answer"}
           {listening && <VoiceBars on count={5} className="ml-1 h-3.5" />}
         </span>
         <span className="hidden text-[12.5px] text-ink-3 sm:inline min-[56.25rem]:hidden xl:inline">The transcript stays editable</span>
         <span
           className={cx(
-            "ml-auto flex h-9 items-center whitespace-nowrap rounded-lg px-3.5 text-[13px] font-medium transition-colors duration-300",
-            frame.phase === "choosing" || frame.phase === "holding" ? "bg-accent text-accent-ink" : "bg-surface-2 text-ink-3",
+            "ml-auto flex h-9 items-center whitespace-nowrap rounded-lg px-3.5 text-[13px] font-medium transition-[background-color,color,transform,box-shadow] duration-500 ease-spring",
+            frame.phase === "choosing" || frame.phase === "holding" ? "scale-100 bg-accent text-accent-ink shadow-[0_8px_20px_-10px_var(--accent-glow)]" : "scale-95 bg-surface-2 text-ink-3",
           )}
         >
           Submit answer
@@ -213,9 +218,18 @@ export function Hero() {
       <div className="mx-auto grid max-w-7xl items-center gap-12 px-5 pb-36 pt-12 sm:px-8 min-[56.25rem]:min-h-[calc(100svh-4rem)] min-[56.25rem]:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] min-[56.25rem]:gap-10 min-[56.25rem]:pb-20 min-[56.25rem]:pt-8 lg:gap-16 lg:pb-32 lg:pt-10">
         <div>
           <h1 className="text-balance font-display text-[42px] font-semibold leading-[1.02] tracking-[-0.035em] text-ink sm:text-[54px] min-[56.25rem]:text-[41px] lg:text-[54px] xl:text-[64px]">
-            The technical interview that asks the <span className="claim-mark hero-mark bg-transparent">second question.</span>
+            {HEADLINE.map((word, i) => (
+              <Fragment key={word + i}>
+                <span className="hero-word" style={{ "--i": i } as CSSProperties}>
+                  {word}
+                </span>{" "}
+              </Fragment>
+            ))}
+            <span className="hero-word" style={{ "--i": HEADLINE.length } as CSSProperties}>
+              <span className="claim-mark hero-mark bg-transparent">second question.</span>
+            </span>
           </h1>
-          <p className="mt-6 max-w-[34rem] text-pretty text-[17px] leading-relaxed text-ink-2 sm:text-lg min-[56.25rem]:text-[16px] lg:mt-7 lg:text-lg">
+          <p style={{ "--d": "420ms" } as CSSProperties} className="rise mt-6 max-w-[34rem] text-pretty text-[17px] leading-relaxed text-ink-2 sm:text-lg min-[56.25rem]:text-[16px] lg:mt-7 lg:text-lg">
             Publish one job and share one link.{" "}
             <span className="hidden sm:inline">
               Each candidate solves a coding problem against hidden tests, then talks through their résumé with an interviewer that follows up, checks
@@ -223,11 +237,20 @@ export function Hero() {
             </span>
             You read a report that explains every score.
           </p>
-          <HomeActions className="mt-8 lg:mt-10" sampleHref="#report" />
+          <div className="rise" style={{ "--d": "560ms" } as CSSProperties}>
+            <HomeActions className="mt-8 lg:mt-10" sampleHref="#report" />
+          </div>
         </div>
 
         <div ref={stageRef} className="relative">
-          <InterviewStage frame={frame} />
+          <div
+            aria-hidden
+            className="pointer-events-none absolute -inset-10 -z-10 rounded-[48px] opacity-70 blur-3xl transition-opacity duration-1000 dark:opacity-40"
+            style={{ background: "radial-gradient(60% 55% at 60% 40%, var(--accent-glow), transparent 70%)" }}
+          />
+          <div className="rise" style={{ "--d": "240ms" } as CSSProperties}>
+            <InterviewStage frame={frame} />
+          </div>
           <p className="mt-4 px-2 text-[13px] leading-relaxed text-ink-3 min-[56.25rem]:hidden lg:block">
             A sample exchange. Questions are read aloud and stay on screen; the candidate speaks or types, and edits the transcript before it is scored.
           </p>

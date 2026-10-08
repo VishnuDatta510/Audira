@@ -25,7 +25,7 @@ function ClaimText({ turn, animate, markDelay }: { turn: Turn; animate: boolean;
 
 function TranscriptCard({ step, animate }: { step: FollowUpStep; animate: boolean }) {
   return (
-    <div className="rounded-[24px] border border-line bg-bg p-5 shadow-lift sm:p-7">
+    <div className="rounded-[24px] border border-line bg-bg p-5 shadow-float sm:p-7">
       <p className="flex items-center gap-2 text-[12.5px] font-medium text-ink-3">
         <span className="size-1.5 rounded-full bg-accent" />
         {step.round}
@@ -143,12 +143,14 @@ export function FollowUps() {
                     onClick={() => goTo(i)}
                     className="group flex h-6 flex-1 items-center"
                   >
-                    <span
-                      className={cx(
-                        "h-1 w-full rounded-full transition-colors duration-500",
-                        active === i ? "bg-accent" : "bg-line group-hover:bg-line-strong",
-                      )}
-                    />
+                    <span className="h-1 w-full overflow-hidden rounded-full bg-line transition-colors duration-300 group-hover:bg-line-strong">
+                      <span
+                        className={cx(
+                          "block h-full origin-left rounded-full bg-accent transition-transform duration-700 ease-expo",
+                          active === i ? "scale-x-100" : i < active ? "scale-x-100 opacity-35" : "scale-x-0",
+                        )}
+                      />
+                    </span>
                   </button>
                 ))}
               </div>

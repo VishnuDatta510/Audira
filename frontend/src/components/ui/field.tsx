@@ -1,4 +1,5 @@
-import { forwardRef, useId } from "react";
+import { forwardRef, useId, useState } from "react";
+import { Eye, EyeOff } from "lucide-react";
 import { cx } from "@/lib/format";
 
 export const controlClass =
@@ -44,6 +45,24 @@ export function Field({
 export const Input = forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(function Input({ className, ...rest }, ref) {
   return <input ref={ref} className={cx(controlClass, "h-11", className)} {...rest} />;
 });
+
+export function PasswordInput({ className, ...rest }: Omit<React.InputHTMLAttributes<HTMLInputElement>, "type">) {
+  const [shown, setShown] = useState(false);
+  return (
+    <div className="relative">
+      <input type={shown ? "text" : "password"} className={cx(controlClass, "h-11 pr-11", className)} {...rest} />
+      <button
+        type="button"
+        onClick={() => setShown((value) => !value)}
+        className="absolute inset-y-0 right-0 grid w-11 place-items-center rounded-r-[11px] text-ink-3 transition-colors duration-300 hover:text-ink"
+        aria-label={shown ? "Hide password" : "Show password"}
+        aria-pressed={shown}
+      >
+        {shown ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+      </button>
+    </div>
+  );
+}
 
 export const Textarea = forwardRef<HTMLTextAreaElement, React.TextareaHTMLAttributes<HTMLTextAreaElement>>(function Textarea(
   { className, ...rest },

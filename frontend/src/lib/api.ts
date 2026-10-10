@@ -90,7 +90,7 @@ const post = <T>(path: string, body?: unknown) =>
 async function audioRequest(path: string, signal?: AbortSignal): Promise<Blob> {
   let response: Response;
   try {
-    response = await fetch(endpoint(path), { headers: { Accept: "audio/wav" }, signal });
+    response = await fetch(endpoint(path), { headers: { Accept: "audio/wav", ...authHeader() }, signal });
   } catch (error) {
     if (error instanceof DOMException && error.name === "AbortError") throw error;
     throw new ApiError(UNREACHABLE, 0);
@@ -112,6 +112,20 @@ export function listenSocketUrl(sessionId: string): string {
   return `${origin}/api/sessions/${encodeURIComponent(sessionId)}/listen`;
 }
 
+/** Browsers cannot set headers on a WebSocket, so the token rides in the subprotocol list instead of the URL. */
+export function listenSocketProtocols(): string[] | undefined {
+  const token = currentToken();
+  return token ? ["bearer", token] : undefined;
+}
+
+/** Ends this device's session on the server, then forgets it locally even if the server is unreachable. */
+export async function signOut() {
+  try {
+    await post("/auth/logout");
+  } catch {}
+  setUser(null);
+}
+
 export const api = {
   config: () => request<AppConfig>("/config"),
   languages: () => request<Language[]>("/languages"),
@@ -119,6 +133,10 @@ export const api = {
   register: (name: string, email: string, password: string, role: AccountRole = "candidate", adminAccessCode = "") =>
     post<User>("/auth/register", { name, email, password, role, admin_access_code: adminAccessCode }),
   login: (email: string, password: string) => post<User>("/auth/login", { email, password }),
+  me: () => request<Omit<User, "token">>("/auth/me"),
+  signOutEverywhere: () => post<{ signed_out: boolean }>("/auth/logout-all"),
+  changePassword: (currentPassword: string, newPassword: string) =>
+    post<{ changed: boolean }>("/auth/password", { current_password: currentPassword, new_password: newPassword }),
 
   interviews: () => request<InterviewDetail[]>("/admin/interviews"),
   interview: (id: string) => request<InterviewDetail>(`/admin/interviews/${id}`),

@@ -5,7 +5,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { LogOut } from "lucide-react";
 import { Brand } from "@/components/brand";
-import { setUser, useUser } from "@/lib/auth";
+import { signOut } from "@/lib/api";
+import { useUser } from "@/lib/auth";
 import { cx } from "@/lib/format";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LinkButton } from "@/components/ui/button";
@@ -26,8 +27,8 @@ export function SiteHeader() {
   const router = useRouter();
   const user = useUser();
   const scrolled = useScrolled();
-  const signOut = () => {
-    setUser(null);
+  const leave = async () => {
+    await signOut();
     router.replace("/");
   };
   const links = user?.role === "admin" ? [{ href: "/admin", label: "Interviews" }] : [];
@@ -67,14 +68,16 @@ export function SiteHeader() {
           <ThemeToggle />
           {user ? (
             <div className="flex items-center gap-1.5 pl-1">
-              <span
+              <Link
+                href="/account"
                 className="grid size-8 place-items-center rounded-full bg-accent-soft font-display text-[13px] font-semibold text-accent ring-2 ring-transparent transition-[box-shadow] duration-300 hover:ring-accent/30 animate-pop"
-                title={user.email}
+                title={`${user.email} · Account`}
+                aria-label="Account"
               >
                 {user.name.slice(0, 1).toUpperCase()}
-              </span>
+              </Link>
               <button
-                onClick={signOut}
+                onClick={leave}
                 className="group grid size-9 place-items-center rounded-[10px] text-ink-3 transition-[background-color,color,transform] duration-300 hover:bg-surface-2 hover:text-ink active:scale-90"
                 aria-label="Sign out"
                 title="Sign out"

@@ -3,7 +3,8 @@
 import { useRouter } from "next/navigation";
 import { AudiraMark } from "@/components/brand";
 import { Button, LinkButton } from "@/components/ui/button";
-import { setUser, useUser } from "@/lib/auth";
+import { signOut } from "@/lib/api";
+import { useUser } from "@/lib/auth";
 
 /** Shown on interviewer pages to anyone who is not signed in as an interviewer. */
 export function InterviewerGate({ next }: { next: string }) {
@@ -11,8 +12,8 @@ export function InterviewerGate({ next }: { next: string }) {
   const user = useUser();
   const signIn = `/sign-in?next=${encodeURIComponent(next)}`;
 
-  function switchAccount() {
-    setUser(null);
+  async function switchAccount() {
+    await signOut();
     router.push(signIn);
   }
 

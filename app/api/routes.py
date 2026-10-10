@@ -18,7 +18,7 @@ from app.services.conversation import CONVERSATIONAL_SECTIONS
 from app.services.proctoring import WARNING_EVENTS, record_observation, rising_edge
 from app.services.report import build_report
 from app.services.session_store import SECTIONS, store
-from app.services.listen import bridge_listen
+from app.services.listen import SESSION_MISSING, bridge_listen
 from app.services.speech import cartesia_speech
 from app.workflows.interview_graph import interview_graph
 
@@ -151,9 +151,9 @@ def get_session(session_id: str, authorization: str | None = Header(default=None
 
 
 @router.get("/sessions/{session_id}/speech")
-def question_speech(session_id: str):
+def question_speech(session_id: str, authorization: str | None = Header(default=None)):
     """WAV of the question currently on screen. The client cannot choose the spoken text."""
-    session = session_or_404(session_id)
+    session = candidate_session(session_id, authorization)
     ensure_active(session)
     if session.active_section == "dsa":
         raise HTTPException(409, "The coding round stays on screen and is not spoken")
@@ -174,8 +174,19 @@ def question_speech(session_id: str):
 
 @router.websocket("/sessions/{session_id}/listen")
 async def listen(websocket: WebSocket, session_id: str):
-    """Stream microphone PCM to Cartesia and return the running transcript."""
-    await bridge_listen(websocket, session_id)
+    """Stream microphone PCM to Cartesia and return the running transcript.
+
+    Browsers cannot set headers on a WebSocket, so the token arrives as the
+    subprotocol pair ["bearer", token] rather than in the URL, which gets logged.
+    """
+    protocols = websocket.scope.get("subprotocols") or []
+    token = protocols[1] if len(protocols) == 2 and protocols[0] == "bearer" else None
+    denied = None
+    try:
+        candidate_session(session_id, f"Bearer {token}" if token else None)
+    except HTTPException as exc:
+        denied = SESSION_MISSING if exc.status_code == 404 else exc.detail
+    await bridge_listen(websocket, session_id, subprotocol="bearer" if token else None, denied=denied)
 
 
 @router.post("/sessions/{session_id}/answer")

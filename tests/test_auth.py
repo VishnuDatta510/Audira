@@ -7,7 +7,9 @@ from fastapi.testclient import TestClient
 from app.core.config import settings
 from app.main import app
 from app.services import auth
+from app.services.listen import KEY_MISSING
 from app.services.repository import SESSION_IDLE, repository
+from app.services.session_store import store
 
 client = TestClient(app)
 PASSWORD = "correct-horse-battery"
@@ -142,3 +144,25 @@ def test_changing_password_signs_out_other_devices():
     assert _me(there) == 401
     assert _login().status_code == 401
     assert _login(password=NEW_PASSWORD).status_code == 200
+
+
+def test_speech_and_listen_belong_to_the_candidate(monkeypatch):
+    monkeypatch.setattr("app.api.routes.cartesia_speech", lambda text: b"RIFF")
+    monkeypatch.setattr(settings, "cartesia_api_key", "")
+    owner = _register().json()["token"]
+    other = _register(email="eve@example.com").json()["token"]
+    session = store.create({"interview_id": "posting-1", "candidate_email": "ada@example.com", "candidate_name": "Ada"}, ["Tell me about a project?"])
+
+    speech = f"/api/sessions/{session.id}/speech"
+    assert client.get(speech).status_code == 401
+    assert client.get(speech, headers=_auth(other)).status_code == 403
+    assert client.get(speech, headers=_auth(owner)).status_code == 200
+
+    listen = f"/api/sessions/{session.id}/listen"
+    with client.websocket_connect(listen) as ws:
+        assert ws.receive_json() == {"type": "error", "message": "Sign in to continue"}
+    with client.websocket_connect(listen, subprotocols=["bearer", other]) as ws:
+        assert ws.receive_json() == {"type": "error", "message": "This interview belongs to another candidate"}
+    with client.websocket_connect(listen, subprotocols=["bearer", owner]) as ws:
+        assert ws.accepted_subprotocol == "bearer"
+        assert ws.receive_json() == {"type": "error", "message": KEY_MISSING}

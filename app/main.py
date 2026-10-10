@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from app.api import code_routes, interview_routes, routes
+from app.api import auth_routes, code_routes, interview_routes, routes
 from app.core.config import browser_origins, settings
 from app.services.agent import AgentUnavailable
 from app.services.repository import repository
@@ -31,6 +31,7 @@ app.add_middleware(
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
 )
+app.include_router(auth_routes.router)
 app.include_router(routes.router)
 app.include_router(code_routes.router)
 app.include_router(interview_routes.router)

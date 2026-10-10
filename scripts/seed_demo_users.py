@@ -2,7 +2,8 @@
 
 Run: .\\.venv\\Scripts\\python.exe scripts\\seed_demo_users.py
 """
-from app.services.repository import repository, password_hash
+from app.services.auth import hash_password
+from app.services.repository import repository
 
 
 DEMO_USERS = [
@@ -25,7 +26,7 @@ def main() -> None:
     for name, email, password in DEMO_USERS:
         repository.db.users.update_one(
             {"email": email},
-            {"$set": {"name": name, "email": email, "password_hash": password_hash(password), "is_demo": True}},
+            {"$set": {"name": name, "email": email, "password_hash": hash_password(password), "is_demo": True}},
             upsert=True,
         )
     print(f"Seeded {len(DEMO_USERS)} demo users into '{repository.db.name}'.")

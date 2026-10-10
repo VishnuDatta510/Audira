@@ -14,10 +14,16 @@ def access_code_ok(given: str) -> bool:
     return secrets.compare_digest(given, expected)
 
 
-def user_from_authorization(authorization: str | None) -> dict:
+def bearer_token(authorization: str | None) -> str | None:
     if not authorization or not authorization.lower().startswith("bearer "):
+        return None
+    return authorization.split(" ", 1)[1].strip() or None
+
+
+def user_from_authorization(authorization: str | None) -> dict:
+    token = bearer_token(authorization)
+    if not token:
         raise HTTPException(401, "Sign in to continue")
-    token = authorization.split(" ", 1)[1].strip()
     user = repository.user_from_token(token)
     if not user:
         raise HTTPException(401, "Sign in to continue")

@@ -3,9 +3,9 @@ from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Header, HTTPException, UploadFile, WebSocket
 from fastapi.responses import Response
 from app.core.config import settings
-from app.domain.schemas import AnswerRequest, DSAAnswerRequest, DSAStartRequest, ProctorEventRequest, StartSessionRequest, RegisterRequest, LoginRequest, VisionObservationRequest, SectionStartRequest
+from app.domain.schemas import AnswerRequest, DSAAnswerRequest, DSAStartRequest, ProctorEventRequest, StartSessionRequest, VisionObservationRequest, SectionStartRequest
 from app.api.code_routes import execute, public_problem
-from app.api.deps import access_code_ok, require_admin, user_from_authorization
+from app.api.deps import require_admin, user_from_authorization
 from app.problems import problem_for_difficulty
 from app.services.prepared_problems import problem_for_session
 from app.services.assessment import evaluate_dsa_submission
@@ -53,22 +53,6 @@ async def extract_document(file: UploadFile):
     except Exception as exc:
         raise HTTPException(422, f"Could not read {file.filename}: {exc}") from exc
     return {"file_name": file.filename, "text": text, "characters": len(text)}
-
-
-@router.post("/auth/register")
-def register(request: RegisterRequest):
-    if request.role == "admin" and not access_code_ok(request.admin_access_code):
-        raise HTTPException(403, "Interviewer signup needs the access code from ADMIN_ACCESS_CODE")
-    try:
-        return repository.create_user(request.name, request.email, request.password, request.role)
-    except ValueError as exc:
-        raise HTTPException(409, str(exc)) from exc
-
-@router.post("/auth/login")
-def login(request: LoginRequest):
-    user = repository.authenticate(request.email, request.password)
-    if not user: raise HTTPException(401, "Invalid email or password")
-    return user
 
 
 def session_or_404(session_id: str):

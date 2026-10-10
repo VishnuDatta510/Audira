@@ -11,6 +11,7 @@ import pytest
 
 from app.core.config import settings
 from app.services.agent import agent
+from app.services.auth import access_code_attempts, sign_in_attempts
 
 _counter = itertools.count(1)
 
@@ -96,3 +97,5 @@ def scripted_reply(system: str, user: str, max_tokens: int, temperature: float, 
 def offline(monkeypatch):
     monkeypatch.setattr(settings, "code_runner", "local")
     monkeypatch.setattr(agent, "_chat", scripted_reply)
+    sign_in_attempts.reset()
+    access_code_attempts.reset()

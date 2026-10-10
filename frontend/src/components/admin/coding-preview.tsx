@@ -3,7 +3,7 @@ import type { Problem } from "@/lib/types";
 export function CodingPreview({ problem }: { problem: Problem }) {
   const hidden = Math.max(0, problem.total_tests - problem.sample_tests.length);
   return (
-    <section className="mt-12 border-t border-line pt-10">
+    <section className="mt-14 rounded-3xl border border-line bg-surface p-6 shadow-lift sm:p-8">
       <h2 className="font-display text-xl font-semibold text-ink">Coding problem the agent wrote</h2>
       <p className="mt-1 text-sm text-ink-3">
         Candidates see this after they start the round. {hidden} hidden {hidden === 1 ? "test stays" : "tests stay"} on the server.
@@ -23,7 +23,7 @@ export function CodingPreview({ problem }: { problem: Problem }) {
       {problem.sample_tests.length > 0 && (
         <ol className="mt-6 space-y-3">
           {problem.sample_tests.map((sample) => (
-            <li key={sample.index} className="rounded-xl border border-line bg-surface p-4">
+            <li key={sample.index} className="rounded-xl border border-line bg-surface-2/60 p-4">
               <p className="text-xs font-medium uppercase tracking-wide text-ink-3">Sample {sample.index + 1}</p>
               <pre className="mt-2 overflow-x-auto whitespace-pre-wrap font-mono text-[12px] leading-relaxed text-ink">{sample.input}</pre>
               <p className="mt-3 text-xs font-medium uppercase tracking-wide text-ink-3">Expected</p>

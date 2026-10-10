@@ -67,7 +67,7 @@ wheels = [
 ]
 
 [[package]]
-name = "bnb"
+name = "audira"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [

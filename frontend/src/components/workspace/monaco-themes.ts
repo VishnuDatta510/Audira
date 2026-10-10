@@ -1,6 +1,6 @@
 import type { Monaco } from "@monaco-editor/react";
 
-export const EDITOR_THEME = { light: "bnb-light", dark: "bnb-dark" } as const;
+export const EDITOR_THEME = { light: "audira-light", dark: "audira-dark" } as const;
 
 let defined = false;
 

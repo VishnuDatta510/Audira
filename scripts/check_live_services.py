@@ -1,6 +1,6 @@
 """Smoke-test the live interview agent (Hugging Face) and Judge0 with the keys in .env.
 
-Run from Build-N-Pray/:  .\\.venv\\Scripts\\python.exe scripts\\check_live_services.py
+Run from the repo root:  .\\.venv\\Scripts\\python.exe scripts\\check_live_services.py
 Each step prints how long it took and the agent's JSON output. This uses a few
 thousand tokens of Hugging Face credit.
 """

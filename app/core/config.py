@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     agent_providers: str = "huggingface,gemini,groq"
     agent_timeout_seconds: float = 90.0
     mongodb_uri: str | None = None
-    mongodb_database: str = "bnb_interview"
+    mongodb_database: str = "audira"
     proctor_warning_limit: int = 5
     proctor_face_absence_seconds: int = 10
     proctor_mouth_review_seconds: float = 1.5

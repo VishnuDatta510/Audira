@@ -58,7 +58,7 @@ class LocalExecutor:
     def run_batch(self, language: Language, code: str, stdins: list[str], time_limit_s: float) -> BatchResult:
         if language.run is None:
             raise ValueError(f"{language.label} has no local run command")
-        with tempfile.TemporaryDirectory(prefix="bnb-run-") as tmp:
+        with tempfile.TemporaryDirectory(prefix="audira-run-") as tmp:
             directory = Path(tmp)
             source = directory / language.file_name
             source.write_text(code, encoding="utf-8")

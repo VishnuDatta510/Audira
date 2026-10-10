@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Bricolage_Grotesque, Geist, Geist_Mono } from "next/font/google";
 import { Providers } from "@/components/providers";
 import "./globals.css";
@@ -20,10 +20,18 @@ const bricolage = Bricolage_Grotesque({
 
 export const metadata: Metadata = {
   title: {
-    default: "BNB Interviews",
-    template: "%s · BNB Interviews",
+    default: "Audira · The technical interview that listens",
+    template: "%s · Audira",
   },
   description: "Send candidates a technical interview: a timed coding round, spoken project and fundamentals rounds, and a written report for the recruiter.",
+  applicationName: "Audira",
+};
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f2f4f3" },
+    { media: "(prefers-color-scheme: dark)", color: "#0d1311" },
+  ],
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

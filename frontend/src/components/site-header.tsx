@@ -2,71 +2,88 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { LogOut } from "lucide-react";
+import { Brand } from "@/components/brand";
 import { setUser, useUser } from "@/lib/auth";
 import { cx } from "@/lib/format";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LinkButton } from "@/components/ui/button";
 
-export function BrandMark({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 28 28" className={className} aria-hidden>
-      <rect width="28" height="28" rx="8" className="fill-accent" />
-      <path d="M8 9.5h7.5M8 14h12M8 18.5h5" stroke="var(--accent-ink)" strokeWidth="2.2" strokeLinecap="round" />
-      <rect x="17" y="16.4" width="2.4" height="4.2" rx="1.2" className="fill-(--accent-ink)" />
-    </svg>
-  );
-}
-
-export function Brand() {
-  return (
-    <Link href="/" className="flex items-center gap-2.5 font-display text-[17px] font-semibold text-ink">
-      <BrandMark className="size-7" />
-      BNB <span className="font-normal text-ink-3">Interviews</span>
-    </Link>
-  );
+function useScrolled(threshold = 8) {
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const update = () => setScrolled(window.scrollY > threshold);
+    update();
+    window.addEventListener("scroll", update, { passive: true });
+    return () => window.removeEventListener("scroll", update);
+  }, [threshold]);
+  return scrolled;
 }
 
 export function SiteHeader() {
   const pathname = usePathname();
   const router = useRouter();
   const user = useUser();
+  const scrolled = useScrolled();
   const signOut = () => {
     setUser(null);
     router.replace("/");
   };
   const links = user?.role === "admin" ? [{ href: "/admin", label: "Interviews" }] : [];
   return (
-    <header className="sticky top-0 z-30 border-b border-line bg-bg/85 backdrop-blur-md">
-      <div className="mx-auto flex h-16 max-w-6xl items-center gap-3 px-5 sm:gap-8 sm:px-8">
+    <header
+      className={cx(
+        "sticky top-0 z-30 border-b transition-[background-color,border-color,box-shadow] duration-500 ease-expo",
+        scrolled ? "border-line bg-bg/80 shadow-[0_8px_24px_-18px_hsl(var(--shadow-color)/0.35)] backdrop-blur-xl backdrop-saturate-150" : "border-transparent bg-bg/0",
+      )}
+    >
+      <div className="mx-auto flex h-16 max-w-7xl items-center gap-3 px-5 sm:gap-8 sm:px-8">
         <Brand />
         <nav className="flex items-center gap-1">
-          {links.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cx(
-                "rounded-md px-3 py-1.5 text-sm transition-colors",
-                pathname.startsWith(item.href) ? "text-ink font-medium" : "text-ink-2 hover:text-ink",
-              )}
-            >
-              {item.label}
-            </Link>
-          ))}
+          {links.map((item) => {
+            const active = pathname.startsWith(item.href);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={cx(
+                  "group relative rounded-lg px-3 py-1.5 text-sm transition-colors duration-300",
+                  active ? "font-medium text-ink" : "text-ink-2 hover:text-ink",
+                )}
+              >
+                {item.label}
+                <span
+                  className={cx(
+                    "absolute inset-x-3 -bottom-[13px] h-0.5 origin-left rounded-full bg-accent transition-transform duration-500 ease-expo",
+                    active ? "scale-x-100" : "scale-x-0 group-hover:scale-x-50",
+                  )}
+                />
+              </Link>
+            );
+          })}
         </nav>
         <div className="ml-auto flex items-center gap-2">
           <ThemeToggle />
           {user ? (
-            <div className="flex items-center gap-2 pl-1">
-              <span className="grid size-8 place-items-center rounded-full bg-accent-soft text-[13px] font-semibold text-accent" title={user.email}>
+            <div className="flex items-center gap-1.5 pl-1">
+              <span
+                className="grid size-8 place-items-center rounded-full bg-accent-soft font-display text-[13px] font-semibold text-accent ring-2 ring-transparent transition-[box-shadow] duration-300 hover:ring-accent/30 animate-pop"
+                title={user.email}
+              >
                 {user.name.slice(0, 1).toUpperCase()}
               </span>
-              <button onClick={signOut} className="rounded-md p-2 text-ink-3 hover:bg-surface-2 hover:text-ink" aria-label="Sign out">
-                <LogOut className="size-4" />
+              <button
+                onClick={signOut}
+                className="group grid size-9 place-items-center rounded-[10px] text-ink-3 transition-[background-color,color,transform] duration-300 hover:bg-surface-2 hover:text-ink active:scale-90"
+                aria-label="Sign out"
+                title="Sign out"
+              >
+                <LogOut className="size-4 transition-transform duration-300 ease-expo group-hover:translate-x-0.5" />
               </button>
             </div>
           ) : (
-            <LinkButton href="/sign-in" variant="ghost" size="sm">
+            <LinkButton href="/sign-in" variant="secondary" size="sm">
               Sign in
             </LinkButton>
           )}

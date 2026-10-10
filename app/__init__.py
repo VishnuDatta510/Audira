@@ -1,1 +1,1 @@
-"""BNB AI Interview Coach."""
+"""Audira: the AI technical interviewer."""

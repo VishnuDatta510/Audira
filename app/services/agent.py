@@ -1,4 +1,4 @@
-"""The interview agent: one Hugging Face chat model that does every judgment in BNB.
+"""The interview agent: one Hugging Face chat model that does every judgment in Audira.
 
 It reads the candidate profile into a brief, writes the opening, project and
 fundamentals questions, authors the coding problem for an interviewer posting,
@@ -128,7 +128,7 @@ def _openai_compatible(base_url: str, api_key: str) -> Callable[[], ChatClient]:
 
 
 def _provider_settings() -> dict[str, tuple[str, Callable[[], ChatClient]] | None]:
-    """Every provider BNB knows, as (model, client factory), or None when it has no key.
+    """Every provider Audira knows, as (model, client factory), or None when it has no key.
 
     Gemini and Groq use the OpenAI SDK: huggingface_hub cannot parse Gemini's error bodies
     and fails on its longer replies.

@@ -1,12 +1,14 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
+import { migrateLegacyStorage } from "@/lib/legacy-storage";
 import type { User } from "@/lib/types";
 
-const KEY = "bnb:user";
+const KEY = "audira:user";
 const listeners = new Set<() => void>();
 
 function read(): string | null {
+  migrateLegacyStorage();
   return typeof window === "undefined" ? null : window.localStorage.getItem(KEY);
 }
 

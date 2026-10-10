@@ -5,7 +5,7 @@ import { SpeakingVoiceField } from "@/components/landing/voice-field";
 
 export function ClosingSection() {
   return (
-    <section className="relative isolate overflow-hidden bg-field text-field-ink">
+    <section className="grain relative isolate overflow-hidden bg-field text-field-ink">
       <SpeakingVoiceField colorVar="--field-ink-2" className="absolute inset-x-0 bottom-0 -z-10 h-32 w-full opacity-70 lg:h-44" />
       <PlayOnView className="mx-auto max-w-7xl px-5 pb-44 pt-24 sm:px-8 lg:pb-56 lg:pt-32">
         <h2 className="play-rise max-w-[16ch] text-balance font-display text-[44px] font-semibold leading-[1.02] tracking-[-0.035em] sm:text-[64px] xl:text-[76px]">

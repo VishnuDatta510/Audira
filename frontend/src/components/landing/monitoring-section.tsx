@@ -43,16 +43,19 @@ export function MonitoringSection() {
         </PlayOnView>
 
         <PlayOnView>
-          <div className="overflow-hidden rounded-[24px] border border-line bg-surface shadow-lift">
+          <div className="overflow-hidden rounded-[24px] border border-line bg-surface shadow-float">
             <div className="flex h-12 items-center border-b border-line px-5 sm:px-6">
               <span className="font-display text-[14px] font-semibold text-ink">Monitoring log</span>
-              <span className="ml-auto text-[12.5px] text-ink-3">Sample session</span>
+              <span className="ml-auto flex items-center gap-2 text-[12.5px] text-ink-3">
+                <span className="ripple size-1.5 rounded-full bg-danger text-danger" />
+                Sample session
+              </span>
             </div>
             <ol className="divide-y divide-line">
               {observationLog.map((row, i) => (
                 <li
                   key={row.at}
-                  className="play-line grid grid-cols-[auto_1fr] items-baseline gap-x-5 gap-y-1.5 px-5 py-4 sm:grid-cols-[auto_1fr_auto] sm:px-6"
+                  className="play-line grid grid-cols-[auto_1fr] items-baseline gap-x-5 gap-y-1.5 px-5 py-4 transition-colors duration-300 hover:bg-surface-2/60 sm:grid-cols-[auto_1fr_auto] sm:px-6"
                   style={{ "--i": i } as CSSProperties}
                 >
                   <span className="font-mono text-[12.5px] tabular-nums text-ink-3">{row.at}</span>

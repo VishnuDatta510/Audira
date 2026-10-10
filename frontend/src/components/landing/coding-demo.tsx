@@ -129,7 +129,7 @@ export function CodingDemo({ className }: { className?: string }) {
                     key={sample.input}
                     className={cx("flex items-center gap-3 transition-opacity duration-500", done ? "opacity-100" : "opacity-30")}
                   >
-                    <span className={cx("grid size-4 place-items-center rounded-full", done ? "bg-accent-soft text-accent" : "bg-line text-transparent")}>
+                    <span className={cx("grid size-4 place-items-center rounded-full transition-[background-color,color,transform] duration-500 ease-spring", done ? "scale-100 bg-accent-soft text-accent" : "scale-75 bg-line text-transparent")}>
                       <Check className="size-2.5" strokeWidth={3.5} />
                     </span>
                     <span className="w-24 truncate text-ink-2">{sample.input}</span>
@@ -145,7 +145,12 @@ export function CodingDemo({ className }: { className?: string }) {
                 shownStep >= DONE ? "opacity-100 blur-0" : "translate-y-1 opacity-0 blur-[4px]",
               )}
             >
-              <span className="font-display text-[17px] font-semibold text-accent">Accepted</span>
+              <span className={cx("inline-flex items-center gap-1.5 font-display text-[17px] font-semibold text-accent transition-transform duration-700 ease-spring", shownStep >= DONE ? "scale-100" : "scale-75")}>
+                <span className="grid size-5 place-items-center rounded-full bg-accent text-accent-ink">
+                  <Check className="size-3" strokeWidth={3.5} />
+                </span>
+                Accepted
+              </span>
               <span className="text-[13px] text-ink-2">11 of 11 hidden tests passed</span>
               <span className="w-full text-[12.5px] text-ink-3 sm:ml-auto sm:w-auto">Likely O(n) time against an O(n) target · estimate</span>
             </div>

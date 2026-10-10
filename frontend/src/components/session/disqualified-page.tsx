@@ -1,4 +1,4 @@
-import { Brand } from "@/components/site-header";
+import { Brand } from "@/components/brand";
 import { LinkButton } from "@/components/ui/button";
 import { describeWarning } from "@/lib/proctor/warning-copy";
 

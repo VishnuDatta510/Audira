@@ -1,21 +1,21 @@
 """Create or update ten clearly marked demo accounts in MongoDB.
 
-Run: .\\.venv-bnb\\Scripts\\python.exe scripts\\seed_demo_users.py
+Run: .\\.venv\\Scripts\\python.exe scripts\\seed_demo_users.py
 """
 from app.services.repository import repository, password_hash
 
 
 DEMO_USERS = [
-    ("Aarav Sharma", "aarav.demo@bnb.local", "Demo0001"),
-    ("Ananya Iyer", "ananya.demo@bnb.local", "Demo0002"),
-    ("Vikram Patel", "vikram.demo@bnb.local", "Demo0003"),
-    ("Priya Nair", "priya.demo@bnb.local", "Demo0004"),
-    ("Rohan Mehta", "rohan.demo@bnb.local", "Demo0005"),
-    ("Kavya Reddy", "kavya.demo@bnb.local", "Demo0006"),
-    ("Arjun Singh", "arjun.demo@bnb.local", "Demo0007"),
-    ("Meera Kapoor", "meera.demo@bnb.local", "Demo0008"),
-    ("Dev Malhotra", "dev.demo@bnb.local", "Demo0009"),
-    ("Ishita Bose", "ishita.demo@bnb.local", "Demo0010"),
+    ("Aarav Sharma", "aarav.demo@audira.local", "Demo0001"),
+    ("Ananya Iyer", "ananya.demo@audira.local", "Demo0002"),
+    ("Vikram Patel", "vikram.demo@audira.local", "Demo0003"),
+    ("Priya Nair", "priya.demo@audira.local", "Demo0004"),
+    ("Rohan Mehta", "rohan.demo@audira.local", "Demo0005"),
+    ("Kavya Reddy", "kavya.demo@audira.local", "Demo0006"),
+    ("Arjun Singh", "arjun.demo@audira.local", "Demo0007"),
+    ("Meera Kapoor", "meera.demo@audira.local", "Demo0008"),
+    ("Dev Malhotra", "dev.demo@audira.local", "Demo0009"),
+    ("Ishita Bose", "ishita.demo@audira.local", "Demo0010"),
 ]
 
 

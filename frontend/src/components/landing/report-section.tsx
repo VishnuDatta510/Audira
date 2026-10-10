@@ -1,5 +1,6 @@
 import type { CSSProperties } from "react";
 import { Check } from "lucide-react";
+import { CountUp } from "@/components/count-up";
 import { PlayOnView } from "@/components/landing/motion";
 import { cx } from "@/lib/format";
 
@@ -63,16 +64,23 @@ function ReportSheet() {
           <p className="mt-1 text-[14px] text-ink-2">Backend Engineer, Payments · Finished</p>
         </div>
         <div className="text-right">
-          <p className="font-display text-[56px] font-semibold leading-none tracking-[-0.04em] tabular-nums">78</p>
+          <p className="font-display text-[56px] font-semibold leading-none tracking-[-0.04em] tabular-nums">
+            <CountUp value={78} delay={700} />
+          </p>
           <p className="mt-1 text-[12.5px] text-ink-3">Overall</p>
         </div>
       </header>
 
       <dl className="grid grid-cols-3 divide-x divide-line border-b border-line">
-        {rounds.map((round) => (
+        {rounds.map((round, i) => (
           <div key={round.label} className="px-6 py-4 sm:px-8">
             <dt className="text-[12.5px] text-ink-3">{round.label}</dt>
-            <dd className="mt-1 font-display text-[24px] font-semibold tabular-nums">{round.score}</dd>
+            <dd className="mt-1 font-display text-[24px] font-semibold tabular-nums">
+              <CountUp value={round.score} delay={900 + i * 120} />
+            </dd>
+            <div className="mt-2 h-1 overflow-hidden rounded-full bg-surface-2">
+              <div className="bar-fill h-full rounded-full bg-accent" style={{ width: `${round.score}%`, "--d": `${1000 + i * 120}ms` } as CSSProperties} />
+            </div>
           </div>
         ))}
       </dl>
@@ -122,7 +130,7 @@ function ReportSheet() {
 
 export function ReportSection() {
   return (
-    <section id="report" className="scroll-mt-16 bg-field text-field-ink">
+    <section id="report" className="grain scroll-mt-16 bg-field text-field-ink">
       <div className="mx-auto grid max-w-7xl items-start gap-14 px-5 py-24 sm:px-8 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:gap-20 lg:py-32">
         <PlayOnView className="lg:sticky lg:top-28">
           <h2 className="play-rise text-balance font-display text-[36px] font-semibold leading-[1.05] tracking-[-0.03em] sm:text-[52px]">

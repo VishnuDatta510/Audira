@@ -1,11 +1,11 @@
-# BNB Interviews
+# Audira
 
 **An AI technical interviewer for recruiters.**
 
 Publish a job, share one link, and read a written report on every candidate.
 
-**Live demo → [build-n-pray.vercel.app](https://build-n-pray.vercel.app)**  
-API → [build-n-pray.onrender.com](https://build-n-pray.onrender.com)
+**Live demo → [audira.vercel.app](https://audira.vercel.app)**  
+API → [audira-backend.onrender.com](https://audira-backend.onrender.com)
 
 ## Overview
 
@@ -21,7 +21,7 @@ The recruiter gets a ranked scoreboard and a report per candidate. Candidates ne
 
 ### The agents
 
-BNB runs the interview with six specialised agents. Each has its own prompt and a strict JSON schema, and each reply is validated before anything reaches the candidate.
+Audira runs the interview with six specialised agents. Each has its own prompt and a strict JSON schema, and each reply is validated before anything reaches the candidate.
 
 | Agent              | What it does                                                                                                                                                                                     |
 | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -128,12 +128,12 @@ flowchart LR
 ## Getting started
 
 ```powershell
-# API, from Build-N-Pray/
+# API, from the repo root
 uv sync
 copy .env.example .env
 uv run main.py
 
-# Frontend, from Build-N-Pray/frontend/
+# Frontend, from frontend/
 npm install
 npm run dev
 ```

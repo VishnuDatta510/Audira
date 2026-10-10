@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { VoiceLoader } from "@/components/brand";
 import { DocumentInput } from "@/components/setup/document-input";
 import { SiteHeader } from "@/components/site-header";
 import { Button } from "@/components/ui/button";
-import { Field, Input, Textarea } from "@/components/ui/field";
+import { Field, Input, Slider, Textarea } from "@/components/ui/field";
 import { Segmented } from "@/components/ui/segmented";
 import { Switch } from "@/components/ui/switch";
 import { api } from "@/lib/api";
@@ -97,7 +98,7 @@ export default function SetupPage() {
       <main className="mx-auto w-full max-w-4xl flex-1 px-5 pb-24 pt-14 sm:px-8">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <h1 className="font-display text-4xl font-semibold text-ink">Set up your mock interview</h1>
+            <h1 className="font-display text-[44px] font-semibold leading-[1.02] tracking-[-0.03em] text-ink">Set up your mock interview</h1>
             <p className="mt-3 max-w-xl text-[15px] leading-relaxed text-ink-2">
               The questions are written from the job description and your résumé, so the more specific they are, the closer this feels to the real thing. To send the same interview to several candidates,{" "}
               <Link href="/admin" className="font-medium text-ink underline">
@@ -139,7 +140,7 @@ export default function SetupPage() {
           <Group title="Rounds" description="The coding round comes first, then the spoken rounds.">
             <Switch checked={dsaEnabled} onChange={setDsaEnabled} label="Include the coding round" description="One timed problem, judged against hidden tests." />
             {dsaEnabled && (
-              <div className="grid gap-6 sm:grid-cols-2">
+              <div className="rise grid gap-6 sm:grid-cols-2">
                 <div>
                   <p className="mb-2 text-sm font-medium text-ink">Difficulty</p>
                   <Segmented
@@ -155,18 +156,9 @@ export default function SetupPage() {
                 </div>
                 <div>
                   <label htmlFor="minutes" className="mb-2 flex items-baseline justify-between text-sm font-medium text-ink">
-                    Time limit <span className="font-mono text-[13px] text-ink-2">{minutes} min</span>
+                    Time limit <span key={minutes} className="animate-pop rounded-md bg-accent-soft px-1.5 py-0.5 font-mono text-[12.5px] tabular-nums text-accent">{minutes} min</span>
                   </label>
-                  <input
-                    id="minutes"
-                    type="range"
-                    min={5}
-                    max={90}
-                    step={5}
-                    value={minutes}
-                    onChange={(e) => setMinutes(Number(e.target.value))}
-                    className="mt-2 w-full accent-(--accent)"
-                  />
+                  <Slider id="minutes" min={5} max={90} step={5} value={minutes} onChange={setMinutes} className="mt-1" />
                 </div>
               </div>
             )}
@@ -187,8 +179,17 @@ export default function SetupPage() {
               Create interview
             </Button>
             {!ready && !error && <p className="text-[13px] text-ink-3">Fill in the role, job description, your name, résumé and goal to continue.</p>}
-            {busy && <p className="text-[13px] text-ink-3">The interview agent is reading the job description and your résumé. This takes about ten seconds.</p>}
-            {error && <p className="text-[13px] text-danger">{error}</p>}
+            {busy && (
+              <p className="rise flex items-center gap-2.5 text-[13px] text-ink-2">
+                <VoiceLoader className="h-3.5 text-accent" />
+                The interview agent is reading the job description and your résumé. This takes about ten seconds.
+              </p>
+            )}
+            {error && (
+              <p key={error} className="animate-shake text-[13px] text-danger" role="alert">
+                {error}
+              </p>
+            )}
           </div>
         </form>
       </main>

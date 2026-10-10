@@ -1,15 +1,17 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { migrateLegacyStorage } from "@/lib/legacy-storage";
 import type { Problem } from "@/lib/types";
 
-const LANGUAGE_KEY = "bnb:language";
+const LANGUAGE_KEY = "audira:language";
 
 function draftKey(scope: string, slug: string, language: string) {
-  return `bnb:code:${scope}:${slug}:${language}`;
+  return `audira:code:${scope}:${slug}:${language}`;
 }
 
 export function preferredLanguage(available: string[]): string {
+  migrateLegacyStorage();
   const saved = typeof window !== "undefined" ? window.localStorage.getItem(LANGUAGE_KEY) : null;
   if (saved && available.includes(saved)) return saved;
   return available.includes("python") ? "python" : available[0];

@@ -2,6 +2,9 @@
 
 import { useParams } from "next/navigation";
 import { useState } from "react";
+import { Check, Copy, RefreshCw } from "lucide-react";
+import { CountUp } from "@/components/count-up";
+import { cx } from "@/lib/format";
 import { CodingPreview } from "@/components/admin/coding-preview";
 import { InterviewerGate } from "@/components/admin/interviewer-gate";
 import { Scoreboard } from "@/components/admin/scoreboard";
@@ -42,25 +45,46 @@ function Board({ id }: { id: string }) {
       <div className="flex flex-wrap items-end justify-between gap-6">
         <div>
           <p className="text-sm text-ink-3">Scoreboard</p>
-          <h1 className="mt-1 font-display text-4xl font-semibold text-ink">{interview.data.role}</h1>
+          <h1 className="mt-1 font-display text-[44px] font-semibold leading-[1.02] tracking-[-0.03em] text-ink">{interview.data.role}</h1>
           <div className="mt-3 flex flex-wrap items-center gap-3">
             <DifficultyBadge difficulty={interview.data.difficulty} />
             <span className="text-sm text-ink-2">{interview.data.attempt_count} started</span>
-            {average !== null && <span className="text-sm text-ink-2">Average {average}</span>}
+            {average !== null && (
+              <span className="text-sm text-ink-2">
+                Average <CountUp value={average} immediate className="font-semibold text-ink" />
+              </span>
+            )}
             <span className="text-[12px] text-ink-3">
               Created {new Date(interview.data.created_at).toLocaleString(undefined, { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" })}
             </span>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="secondary" onClick={copy}>
+          <Button variant={copied === "copied" ? "primary" : "secondary"} onClick={copy} className="min-w-32">
+            <span className="relative grid size-4 place-items-center">
+              <Copy className={cx("absolute size-4 transition-[transform,opacity] duration-500 ease-spring", copied === "copied" ? "scale-50 opacity-0" : "scale-100 opacity-100")} />
+              <Check className={cx("absolute size-4 transition-[transform,opacity] duration-500 ease-spring", copied === "copied" ? "scale-100 opacity-100" : "scale-50 opacity-0")} strokeWidth={3} />
+            </span>
             {copied === "copied" ? "Copied" : copied === "failed" ? "Copy the link below" : "Copy link"}
           </Button>
-          <Button variant="ghost" onClick={() => { interview.reload(); attempts.reload(); }}>Refresh</Button>
+          <Button
+            variant="ghost"
+            className="group"
+            onClick={() => {
+              interview.reload();
+              attempts.reload();
+            }}
+          >
+            <RefreshCw className="size-4 transition-transform duration-700 ease-spring group-active:rotate-180" />
+            Refresh
+          </Button>
         </div>
       </div>
       <p className="mt-6 max-w-2xl text-[15px] leading-relaxed text-ink-2">{interview.data.summary}</p>
-      <p className="mt-2 break-all font-mono text-[13px] text-ink-3">{link}</p>
+      <p className="mt-3 inline-flex max-w-full items-center gap-2 rounded-lg border border-line bg-surface px-3 py-1.5 font-mono text-[13px] text-ink-2">
+        <span className="size-1.5 shrink-0 rounded-full bg-accent" />
+        <span className="break-all">{link}</span>
+      </p>
 
       <div className="mt-10">
         {attempts.error && !attempts.data && <PageError message={attempts.error} onRetry={attempts.reload} />}

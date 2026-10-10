@@ -89,10 +89,13 @@ export function WorkflowSection() {
           <ol className="grid gap-14 lg:grid-cols-3 lg:gap-10">
             {steps.map((step, i) => (
               <li key={step.title} className="play-rise relative" style={{ "--i": i * 3, "--d": "300ms" } as CSSProperties}>
-                <span className="relative z-10 block size-[11px] rounded-full border-2 border-accent bg-surface" aria-hidden />
+                <span className="relative z-10 grid size-[11px] place-items-center" aria-hidden>
+                  <span className="ripple absolute inset-0 rounded-full text-accent/30" style={{ animationDelay: `${i * 300}ms` }} />
+                  <span className="relative block size-[11px] rounded-full border-2 border-accent bg-surface" />
+                </span>
                 <h3 className="mt-6 font-display text-[22px] font-semibold tracking-[-0.015em] text-ink">{step.title}</h3>
                 <p className="mt-2.5 max-w-sm text-[15px] leading-relaxed text-ink-2">{step.body}</p>
-                <div className="mt-6 max-w-sm">{step.artifact}</div>
+                <div className="mt-6 max-w-sm transition-transform duration-500 ease-spring hover:-translate-y-1">{step.artifact}</div>
               </li>
             ))}
           </ol>

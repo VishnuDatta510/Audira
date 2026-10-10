@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { CircleAlert, FileText } from "lucide-react";
 import { PageError, PageLoading } from "@/components/page-state";
-import { Brand } from "@/components/site-header";
+import { Brand } from "@/components/brand";
 import { StatusBadge } from "@/components/ui/badge";
 import { Button, LinkButton } from "@/components/ui/button";
 import { api } from "@/lib/api";

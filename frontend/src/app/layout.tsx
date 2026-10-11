@@ -25,6 +25,9 @@ export const metadata: Metadata = {
   },
   description: "Send candidates a technical interview: a timed coding round, spoken project and fundamentals rounds, and a written report for the recruiter.",
   applicationName: "Audira",
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://audira.vercel.app"),
+  openGraph: { siteName: "Audira", type: "website" },
+  twitter: { card: "summary_large_image" },
 };
 
 export const viewport: Viewport = {

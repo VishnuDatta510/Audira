@@ -98,11 +98,61 @@ def test_repeated_failures_are_throttled_and_success_resets_the_count():
     assert "Try again in 15 minutes" in blocked.json()["detail"]
 
 
-def test_wrong_access_codes_are_capped(monkeypatch):
-    monkeypatch.setattr(auth.access_code_attempts, "limit", 2)
+def _from(address: str) -> dict:
+    return {"CF-Connecting-IP": address}
+
+
+def test_wrong_access_codes_are_capped_per_address(monkeypatch):
+    monkeypatch.setattr(auth.code_guesses_from_address, "limit", 2)
     for i in range(2):
-        assert _register(email=f"guess{i}@example.com", role="admin", code="wrong").status_code == 403
-    assert _register(email="real@example.com", role="admin", code="test-admin-code").status_code == 429
+        response = client.post("/api/auth/register", headers=_from("203.0.113.9"), json={
+            "name": "Guesser", "email": f"guess{i}@example.com", "password": PASSWORD, "role": "admin", "admin_access_code": "wrong",
+        })
+        assert response.status_code == 403
+    real = {"name": "Real Recruiter", "email": "real@example.com", "password": PASSWORD, "role": "admin", "admin_access_code": "test-admin-code"}
+    assert client.post("/api/auth/register", headers=_from("203.0.113.9"), json=real).status_code == 429
+    # Someone else's wrong guesses do not stop a real interviewer signing up.
+    assert client.post("/api/auth/register", headers=_from("198.51.100.7"), json=real).status_code == 200
+
+
+def test_a_strangers_guesses_do_not_lock_out_the_owner():
+    _register()
+    for _ in range(5):
+        assert client.post("/api/auth/login", headers=_from("203.0.113.9"), json={"email": "ada@example.com", "password": "wrong-password"}).status_code == 401
+    assert client.post("/api/auth/login", headers=_from("203.0.113.9"), json={"email": "ada@example.com", "password": PASSWORD}).status_code == 429
+    assert client.post("/api/auth/login", headers=_from("198.51.100.7"), json={"email": "ada@example.com", "password": PASSWORD}).status_code == 200
+
+
+def test_one_address_cannot_try_many_accounts(monkeypatch):
+    monkeypatch.setattr(auth.failed_from_address, "limit", 3)
+    for i in range(3):
+        assert client.post("/api/auth/login", headers=_from("203.0.113.9"), json={"email": f"user{i}@example.com", "password": "guess-123456"}).status_code == 401
+    assert client.post("/api/auth/login", headers=_from("203.0.113.9"), json={"email": "user9@example.com", "password": "guess-123456"}).status_code == 429
+
+
+def test_guesses_spread_over_many_addresses_are_still_capped(monkeypatch):
+    monkeypatch.setattr(auth.failed_for_account, "limit", 3)
+    _register()
+    for i in range(3):
+        assert client.post("/api/auth/login", headers=_from(f"203.0.113.{i}"), json={"email": "ada@example.com", "password": "wrong-password"}).status_code == 401
+    assert client.post("/api/auth/login", headers=_from("203.0.113.99"), json={"email": "ada@example.com", "password": PASSWORD}).status_code == 429
+
+
+def test_a_simultaneous_duplicate_signup_is_a_conflict_not_a_crash(monkeypatch):
+    from pymongo.errors import DuplicateKeyError
+
+    class Users:
+        def find_one(self, _query):
+            return None  # the other sign-up has not landed yet
+
+        def insert_one(self, _doc):
+            raise DuplicateKeyError("E11000 duplicate key error")
+
+    class Db:
+        users = Users()
+
+    monkeypatch.setattr(repository, "db", Db())
+    assert _register().status_code == 409
 
 
 def test_me_logout_and_logout_all():

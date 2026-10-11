@@ -68,7 +68,7 @@ def password_problem(password: str, email: str) -> str | None:
 
 
 class Throttle:
-    """At most `limit` attempts per key in a sliding window.
+    """At most `limit` failures per key in a sliding window. Successes are never counted.
 
     ponytail: in-process counters, fine for one API instance. Move to Mongo or Redis when the API scales out.
     """
@@ -79,19 +79,25 @@ class Throttle:
         self._hits: dict[str, deque[float]] = {}
         self._lock = threading.Lock()
 
-    def take(self, key: str) -> int:
-        """Record an attempt. Returns 0 when allowed, otherwise the seconds to wait."""
+    def _recent(self, key: str, now: float) -> deque[float]:
+        if len(self._hits) > 10_000:
+            self._hits = {k: v for k, v in self._hits.items() if v and v[-1] > now - self.window}
+        hits = self._hits.setdefault(key, deque())
+        while hits and hits[0] <= now - self.window:
+            hits.popleft()
+        return hits
+
+    def wait(self, key: str) -> int:
+        """0 when another attempt is allowed, otherwise the seconds until it is."""
         with self._lock:
             now = time.monotonic()
-            if len(self._hits) > 10_000:
-                self._hits = {k: v for k, v in self._hits.items() if v[-1] > now - self.window}
-            hits = self._hits.setdefault(key, deque())
-            while hits and hits[0] <= now - self.window:
-                hits.popleft()
-            if len(hits) >= self.limit:
-                return max(1, math.ceil(hits[0] + self.window - now))
-            hits.append(now)
-            return 0
+            hits = self._recent(key, now)
+            return max(1, math.ceil(hits[0] + self.window - now)) if len(hits) >= self.limit else 0
+
+    def fail(self, key: str) -> None:
+        with self._lock:
+            now = time.monotonic()
+            self._recent(key, now).append(now)
 
     def clear(self, key: str) -> None:
         with self._lock:
@@ -102,5 +108,41 @@ class Throttle:
             self._hits.clear()
 
 
-sign_in_attempts = Throttle(limit=5, window_seconds=15 * 60)
-access_code_attempts = Throttle(limit=20, window_seconds=60 * 60)
+# Wrong passwords. The tight limit is per account *and* address, so a stranger's guesses
+# cannot lock the owner out from their own network. The other two catch one address trying
+# many accounts, and guesses at one account spread over many (or forged) addresses.
+failed_sign_ins = Throttle(limit=5, window_seconds=15 * 60)
+failed_from_address = Throttle(limit=30, window_seconds=15 * 60)
+failed_for_account = Throttle(limit=50, window_seconds=60 * 60)
+
+# Wrong interviewer access codes: per address, with a high ceiling across everyone.
+code_guesses_from_address = Throttle(limit=10, window_seconds=60 * 60)
+code_guesses = Throttle(limit=200, window_seconds=60 * 60)
+
+
+def sign_in_wait(email: str, address: str) -> int:
+    return max(failed_sign_ins.wait(f"{email}|{address}"), failed_from_address.wait(address), failed_for_account.wait(email))
+
+
+def sign_in_failed(email: str, address: str) -> None:
+    failed_sign_ins.fail(f"{email}|{address}")
+    failed_from_address.fail(address)
+    failed_for_account.fail(email)
+
+
+def sign_in_succeeded(email: str, address: str) -> None:
+    failed_sign_ins.clear(f"{email}|{address}")
+
+
+def access_code_wait(address: str) -> int:
+    return max(code_guesses_from_address.wait(address), code_guesses.wait("all"))
+
+
+def access_code_failed(address: str) -> None:
+    code_guesses_from_address.fail(address)
+    code_guesses.fail("all")
+
+
+def reset_throttles() -> None:
+    for throttle in (failed_sign_ins, failed_from_address, failed_for_account, code_guesses_from_address, code_guesses):
+        throttle.reset()

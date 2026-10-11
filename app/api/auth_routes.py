@@ -1,11 +1,21 @@
 """Accounts: sign up, sign in, sign out and password changes."""
 import math
 
-from fastapi import APIRouter, Header, HTTPException
+from fastapi import APIRouter, Header, HTTPException, Request
 
-from app.api.deps import access_code_ok, bearer_token, user_from_authorization
+from app.api.deps import access_code_ok, bearer_token, client_address, user_from_authorization
 from app.domain.schemas import ChangePasswordRequest, LoginRequest, RegisterRequest
-from app.services.auth import access_code_attempts, hash_password, needs_rehash, password_problem, sign_in_attempts, verify_password
+from app.services.auth import (
+    access_code_failed,
+    access_code_wait,
+    hash_password,
+    needs_rehash,
+    password_problem,
+    sign_in_failed,
+    sign_in_succeeded,
+    sign_in_wait,
+    verify_password,
+)
 from app.services.repository import repository
 
 router = APIRouter(prefix="/api/auth")
@@ -25,12 +35,14 @@ def _signed_in(user: dict) -> dict:
 
 
 @router.post("/register")
-def register(request: RegisterRequest):
+def register(request: RegisterRequest, http: Request):
     if request.role == "admin":
-        wait = access_code_attempts.take("admin")
+        address = client_address(http)
+        wait = access_code_wait(address)
         if wait:
             raise _too_many(wait)
         if not access_code_ok(request.admin_access_code):
+            access_code_failed(address)
             raise HTTPException(403, "Interviewer signup needs the access code from ADMIN_ACCESS_CODE")
     problem = password_problem(request.password, request.email)
     if problem:
@@ -43,14 +55,16 @@ def register(request: RegisterRequest):
 
 
 @router.post("/login")
-def login(request: LoginRequest):
-    wait = sign_in_attempts.take(request.email)
+def login(request: LoginRequest, http: Request):
+    address = client_address(http)
+    wait = sign_in_wait(request.email, address)
     if wait:
         raise _too_many(wait)
     user = repository.find_user(request.email)
     if not verify_password(request.password, user["password_hash"] if user else None):
+        sign_in_failed(request.email, address)
         raise HTTPException(401, "Invalid email or password")
-    sign_in_attempts.clear(request.email)
+    sign_in_succeeded(request.email, address)
     if needs_rehash(user["password_hash"]):
         repository.set_password_hash(user["email"], hash_password(request.password))
     return _signed_in(user)
@@ -78,20 +92,22 @@ def logout_all(authorization: str | None = Header(default=None)):
 
 
 @router.post("/password")
-def change_password(request: ChangePasswordRequest, authorization: str | None = Header(default=None)):
+def change_password(request: ChangePasswordRequest, http: Request, authorization: str | None = Header(default=None)):
     """Keeps this device signed in and signs out every other one.
 
     A wrong current password is 403, not 401: the client treats 401 as "signed out".
     """
     user = user_from_authorization(authorization)
     email = user["email"]
-    wait = sign_in_attempts.take(email)
+    address = client_address(http)
+    wait = sign_in_wait(email, address)
     if wait:
         raise _too_many(wait)
     stored = repository.find_user(email)
     if not stored or not verify_password(request.current_password, stored["password_hash"]):
+        sign_in_failed(email, address)
         raise HTTPException(403, "Current password is incorrect")
-    sign_in_attempts.clear(email)
+    sign_in_succeeded(email, address)
     problem = password_problem(request.new_password, email)
     if problem:
         raise HTTPException(422, problem)

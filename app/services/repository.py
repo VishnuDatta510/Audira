@@ -5,6 +5,7 @@ import secrets
 from datetime import datetime, timedelta, timezone
 
 from pymongo import MongoClient
+from pymongo.errors import DuplicateKeyError
 
 from app.core.config import settings
 
@@ -82,9 +83,11 @@ class Repository:
             "created_at": _now().isoformat(),
         }
         if self.db is not None:
-            if self.db.users.find_one({"email": email}):
-                raise ValueError("Email already exists")
-            self.db.users.insert_one(dict(user))
+            # The unique index is the real guard: two sign-ups at once both pass a find-first check.
+            try:
+                self.db.users.insert_one(dict(user))
+            except DuplicateKeyError as exc:
+                raise ValueError("Email already exists") from exc
         else:
             if email in self.memory_users:
                 raise ValueError("Email already exists")

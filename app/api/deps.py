@@ -1,7 +1,7 @@
 """Sign-in checks for interviewer and candidate routes."""
 import secrets
 
-from fastapi import Header, HTTPException
+from fastapi import Header, HTTPException, Request
 
 from app.core.config import settings
 from app.services.repository import repository
@@ -12,6 +12,17 @@ def access_code_ok(given: str) -> bool:
     if not expected or len(given) != len(expected):
         return False
     return secrets.compare_digest(given, expected)
+
+
+def client_address(request: Request) -> str:
+    """Best guess at who is calling, for rate limits only.
+
+    Cloudflare in front of Render sets CF-Connecting-IP itself. Render puts the client first in
+    X-Forwarded-For but keeps whatever the client sent, so it can be forged. The limits that use
+    this always have a per-account backstop, so a forged address only escapes the per-address part.
+    """
+    forwarded = request.headers.get("x-forwarded-for", "").split(",")[0].strip()
+    return request.headers.get("cf-connecting-ip") or forwarded or (request.client.host if request.client else "unknown")
 
 
 def bearer_token(authorization: str | None) -> str | None:

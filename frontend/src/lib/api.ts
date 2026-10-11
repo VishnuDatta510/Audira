@@ -18,6 +18,7 @@ import type {
   Attempt,
   InterviewDetail,
   InterviewDraft,
+  LiveAttempt,
   PublicInterview,
 } from "@/lib/types";
 
@@ -142,6 +143,7 @@ export const api = {
   interview: (id: string) => request<InterviewDetail>(`/admin/interviews/${id}`),
   createInterview: (draft: InterviewDraft) => post<InterviewDetail>("/admin/interviews", draft),
   attempts: (id: string) => request<Attempt[]>(`/admin/interviews/${id}/attempts`),
+  liveAttempt: (id: string, sessionId: string) => request<LiveAttempt>(`/admin/interviews/${id}/attempts/${sessionId}/live`),
   publicInterview: (token: string) => request<PublicInterview>(`/interviews/${token}`),
   joinInterview: (token: string, resume: string) =>
     post<{ session_id: string }>(`/interviews/${token}/sessions`, { resume }),

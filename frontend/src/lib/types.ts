@@ -266,3 +266,34 @@ export type Attempt = {
   started_at: string | null;
   warnings: number;
 };
+
+export type LiveTurn = {
+  section: VoiceSectionId;
+  kind: InterviewerMove | "opening";
+  topic: string;
+  question: string;
+  /** Null while the candidate is still answering. */
+  answer: string | null;
+  skipped: boolean;
+  score: number | null;
+  signal: string | null;
+};
+
+export type LiveAttempt = {
+  session_id: string;
+  candidate_name: string;
+  candidate_email: string;
+  role: string;
+  status: AttemptStatus;
+  sections: Record<SectionId, SectionStatus>;
+  active_section: SectionId | null;
+  progress: SessionSummary["voice_progress"];
+  started_at: string;
+  transcript: LiveTurn[];
+  dsa: { title: string; language: string | null; submitted: boolean; seconds_left: number; tests_passed: number | null; tests_total: number | null } | null;
+  round_scores: Partial<Record<SectionId, number>>;
+  observations: { type: string; details: string; observed_at?: string }[];
+  warnings: number;
+  warning_limit: number;
+  disqualified: boolean;
+};

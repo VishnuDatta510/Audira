@@ -4,7 +4,7 @@ from __future__ import annotations
 ROUND_KEYS = ("dsa", "project", "fundamentals")
 
 
-def _status(sections: dict, disqualified: bool) -> str:
+def attempt_status(sections: dict, disqualified: bool) -> str:
     if disqualified:
         return "stopped"
     values = list(sections.values()) or ["not_started"]
@@ -30,7 +30,7 @@ def attempt_row(saved: dict) -> dict:
         "session_id": saved.get("id"),
         "name": profile.get("candidate_name") or "Candidate",
         "email": profile.get("candidate_email") or "",
-        "status": _status(saved.get("sections") or {}, bool(saved.get("disqualified"))),
+        "status": attempt_status(saved.get("sections") or {}, bool(saved.get("disqualified"))),
         "scores": {key: scores.get(key) for key in ROUND_KEYS},
         "overall_score": overall,
         "started_at": saved.get("created_at"),

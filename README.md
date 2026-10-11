@@ -10,6 +10,8 @@ Publish one job, share one link, and get a clear, written report on every candid
 
 [Live demo](https://audira.vercel.app) · [Run it locally](#run-it-locally) · [License](LICENSE)
 
+[![CI](https://github.com/VishnuDatta510/Audira/actions/workflows/ci.yml/badge.svg)](https://github.com/VishnuDatta510/Audira/actions/workflows/ci.yml)
+
 <br />
 
 <picture>
@@ -41,6 +43,10 @@ Every interview gets one shareable link. Candidates are ranked on a scoreboard a
 
 <img src=".github/assets/scoreboard.png" alt="The scoreboard for an interview" width="100%" />
 
+While someone is mid-interview, you can watch it live: the conversation appears as it happens, next to their progress and anything the camera noticed.
+
+<img src=".github/assets/live.png" alt="Watching an interview live" width="100%" />
+
 Each candidate gets a full report covering:
 - their round scores
 - what they showed and what they didn't
@@ -52,6 +58,10 @@ Each candidate gets a full report covering:
   <source media="(prefers-color-scheme: dark)" srcset=".github/assets/report-dark.png" />
   <img src=".github/assets/report.png" alt="A candidate report" width="100%" />
 </picture>
+
+Reports download as a clean PDF to share with the hiring team. Pick any two candidates on the scoreboard to compare them side by side, round by round.
+
+<img src=".github/assets/compare.png" alt="Two candidates side by side" width="100%" />
 
 ## For candidates
 
@@ -70,6 +80,16 @@ In the spoken rounds the questions are read aloud and stay on screen. Candidates
 - **Evidence, not verdicts.** Every rating in a report points to what the candidate actually said or wrote.
 - **Monitoring that respects people.** The camera checks run in the candidate's browser, and no video is uploaded. Anything unusual is recorded as an observation for a person to review, never as an accusation.
 - **Scores stay with the recruiter.** Candidates never see their scores or the interviewer's private notes.
+
+## How it's checked
+
+Every change runs the test suite and a full build of the web app, which is what the badge at the top shows.
+
+The interviewer is also tested on people, or at least convincing stand-ins. The evaluation interviews three simulated candidates who all hand in the same résumé: one who really did the work, an honest junior who mostly watched, and a confident bluffer. A good interviewer should score the real one clearly highest, and its report should call out the bluffer's claims that never got backed up. The same run measures how long the interviewer takes to reply, and how often a freshly written coding problem passes its own tests on the first try.
+
+```bash
+uv run python -m evals.run_personas --authoring 5
+```
 
 ## Run it locally
 

@@ -29,6 +29,7 @@ def memory_db(monkeypatch):
     monkeypatch.setattr(repository, "db", None)
     monkeypatch.setattr(settings, "admin_access_code", "test-admin-code")
     repository.memory_users.clear()
+    repository.memory_auth_sessions.clear()
     repository.memory_sessions.clear()
     repository.memory_interviews.clear()
     clear_authored()
@@ -43,7 +44,7 @@ def _register(role: str, code: str = "") -> dict:
     response = client.post("/api/auth/register", json={
         "name": "Ada Admin" if role == "admin" else "Grace Hopper",
         "email": f"{role}-{suffix}@example.com",
-        "password": "password1",
+        "password": "correct-horse-1",
         "role": role,
         "admin_access_code": code,
     })
@@ -53,7 +54,7 @@ def _register(role: str, code: str = "") -> dict:
 
 def test_interviewer_signup_requires_the_access_code(memory_db):
     denied = client.post("/api/auth/register", json={
-        "name": "No Code", "email": "nocode@example.com", "password": "password1", "role": "admin", "admin_access_code": "wrong",
+        "name": "No Code", "email": "nocode@example.com", "password": "correct-horse-1", "role": "admin", "admin_access_code": "wrong",
     })
     assert denied.status_code == 403
     candidate = _register("candidate")
@@ -176,7 +177,7 @@ def test_each_candidate_gets_one_attempt_and_only_touches_their_own(memory_db):
 
 def test_signing_in_again_keeps_the_first_device_signed_in(memory_db):
     student = _register("candidate")
-    again = client.post("/api/auth/login", json={"email": student["email"], "password": "password1"}).json()
+    again = client.post("/api/auth/login", json={"email": student["email"], "password": "correct-horse-1"}).json()
     assert again["token"] != student["token"]
     admin = _register("admin", "test-admin-code")
     posting = client.post("/api/admin/interviews", json=POSTING, headers=_auth(admin["token"])).json()

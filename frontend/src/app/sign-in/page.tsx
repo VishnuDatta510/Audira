@@ -7,7 +7,7 @@ import { AudiraMark, Brand, Wordmark } from "@/components/brand";
 import { SpeakingVoiceField } from "@/components/landing/voice-field";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
-import { Field, Input } from "@/components/ui/field";
+import { Field, Input, PasswordInput } from "@/components/ui/field";
 import { Segmented } from "@/components/ui/segmented";
 import { PageLoading } from "@/components/page-state";
 import { api } from "@/lib/api";
@@ -38,6 +38,10 @@ function SignInForm() {
     setError(null);
 
     // Manual validation — gives a visible error instead of a silent browser tooltip
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim())) {
+      setError("Enter a valid email address.");
+      return;
+    }
     if (mode === "create") {
       if (name.trim().length < 2) {
         setError("Name must be at least 2 characters.");
@@ -56,7 +60,7 @@ function SignInForm() {
     setBusy(true);
     try {
       const user =
-        mode === "create" ? await api.register(name, email, password, accountRole, accessCode) : await api.login(email, password);
+        mode === "create" ? await api.register(name.trim(), email.trim(), password, accountRole, accessCode.trim()) : await api.login(email.trim(), password);
       setUser(user);
       router.push(safeNext(next, user.role));
     } catch (e) {
@@ -126,11 +130,10 @@ function SignInForm() {
               <Field label="Email">
                 {(id) => <Input id={id} type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" placeholder="you@company.com" />}
               </Field>
-              <Field label="Password" hint={mode === "create" ? "At least 8 characters." : undefined}>
+              <Field label="Password" hint={mode === "create" ? "At least 8 characters. Common passwords are not allowed." : undefined}>
                 {(id) => (
-                  <Input
+                  <PasswordInput
                     id={id}
-                    type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     autoComplete={mode === "create" ? "new-password" : "current-password"}

@@ -1,32 +1,32 @@
 """MongoDB persistence with an in-memory fallback for local demos."""
 import hashlib
 import logging
-import os
 import secrets
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from pymongo import MongoClient
+from pymongo.errors import DuplicateKeyError
 
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
-MAX_TOKENS = 10
+SESSION_IDLE = timedelta(days=7)
+SESSION_LIFETIME = timedelta(days=30)
+SESSION_TOUCH_EVERY = timedelta(hours=1)
 
 
-def password_hash(password: str, salt: bytes | None = None) -> str:
-    salt = salt or os.urandom(16)
-    value = hashlib.scrypt(password.encode(), salt=salt, n=2**14, r=8, p=1)
-    return f"{salt.hex()}${value.hex()}"
+def _digest(token: str) -> str:
+    return hashlib.sha256(token.encode()).hexdigest()
 
 
-def verify_password(password: str, stored: str) -> bool:
-    salt, _ = stored.split("$", 1)
-    return password_hash(password, bytes.fromhex(salt)) == stored
+def _now() -> datetime:
+    return datetime.now(timezone.utc)
 
 
 class Repository:
     def __init__(self):
         self.memory_users: dict[str, dict] = {}
+        self.memory_auth_sessions: dict[str, dict] = {}
         self.memory_sessions: dict[str, dict] = {}
         self.memory_interviews: dict[str, dict] = {}
         self.db = None
@@ -34,7 +34,7 @@ class Repository:
         if settings.mongodb_uri:
             try:
                 database_name = settings.mongodb_database.strip().replace(" ", "_")
-                client = MongoClient(settings.mongodb_uri, serverSelectionTimeoutMS=10000)
+                client = MongoClient(settings.mongodb_uri, serverSelectionTimeoutMS=10000, tz_aware=True)
                 client.admin.command("ping")
                 self.db = client[database_name]
                 self._ensure_collections()
@@ -46,66 +46,105 @@ class Repository:
 
     def _ensure_collections(self) -> None:
         existing = set(self.db.list_collection_names())
-        for name in ("users", "sessions", "interviews"):
+        for name in ("users", "auth_sessions", "sessions", "interviews"):
             if name not in existing:
                 self.db.create_collection(name)
         self.db.users.create_index("email", unique=True)
+        # Sign-in tokens used to live on the user. They are no longer accepted.
+        self.db.users.update_many(
+            {"$or": [{"token_hashes": {"$exists": True}}, {"token_hash": {"$exists": True}}]},
+            {"$unset": {"token_hashes": "", "token_hash": ""}},
+        )
+        self.db.auth_sessions.create_index("token_hash", unique=True)
+        self.db.auth_sessions.create_index("email")
+        self.db.auth_sessions.create_index("expires_at", expireAfterSeconds=0)
         self.db.sessions.create_index("id", unique=True)
         self.db.sessions.create_index("profile.interview_id")
         self.db.interviews.create_index("id", unique=True)
         self.db.interviews.create_index("token", unique=True)
 
-    def _public_user(self, user: dict, token: str) -> dict:
-        return {"name": user["name"], "email": user["email"], "role": user.get("role") or "candidate", "token": token}
+    @staticmethod
+    def public_user(user: dict) -> dict:
+        return {"name": user["name"], "email": user["email"], "role": user.get("role") or "candidate"}
 
-    def _issue_token(self, email: str) -> str:
-        """Add a sign-in token. Earlier ones stay valid, so a second device does not sign out the first."""
-        token = secrets.token_urlsafe(32)
-        digest = hashlib.sha256(token.encode()).hexdigest()
+    def find_user(self, email: str) -> dict | None:
         if self.db is not None:
-            self.db.users.update_one({"email": email}, {"$push": {"token_hashes": {"$each": [digest], "$slice": -MAX_TOKENS}}})
-        else:
-            user = self.memory_users[email]
-            user["token_hashes"] = (user.get("token_hashes", []) + [digest])[-MAX_TOKENS:]
-        return token
+            return self._strip(self.db.users.find_one({"email": email}))
+        return self.memory_users.get(email)
 
-    def create_user(self, name: str, email: str, password: str, role: str = "candidate") -> dict:
+    def create_user(self, name: str, email: str, password_hash: str, role: str = "candidate") -> dict:
         if role not in {"candidate", "admin"}:
             raise ValueError("Unknown role")
         user = {
             "name": name,
-            "email": email.lower(),
-            "password_hash": password_hash(password),
+            "email": email,
+            "password_hash": password_hash,
             "role": role,
-            "created_at": datetime.now(timezone.utc).isoformat(),
+            "created_at": _now().isoformat(),
         }
         if self.db is not None:
-            if self.db.users.find_one({"email": user["email"]}):
-                raise ValueError("Email already exists")
-            self.db.users.insert_one(dict(user))
+            # The unique index is the real guard: two sign-ups at once both pass a find-first check.
+            try:
+                self.db.users.insert_one(dict(user))
+            except DuplicateKeyError as exc:
+                raise ValueError("Email already exists") from exc
         else:
-            if user["email"] in self.memory_users:
+            if email in self.memory_users:
                 raise ValueError("Email already exists")
-            self.memory_users[user["email"]] = user
-        return self._public_user(user, self._issue_token(user["email"]))
+            self.memory_users[email] = user
+        return user
 
-    def authenticate(self, email: str, password: str) -> dict | None:
-        email = email.lower()
-        user = self.db.users.find_one({"email": email}) if self.db is not None else self.memory_users.get(email)
-        if user and verify_password(password, user["password_hash"]):
-            return self._public_user(user, self._issue_token(email))
-        return None
+    def set_password_hash(self, email: str, password_hash: str) -> None:
+        if self.db is not None:
+            self.db.users.update_one({"email": email}, {"$set": {"password_hash": password_hash}})
+        else:
+            self.memory_users[email]["password_hash"] = password_hash
+
+    def create_auth_session(self, email: str) -> str:
+        """A new sign-in. Other devices stay signed in. Only the token's hash is stored."""
+        token = secrets.token_urlsafe(32)
+        now = _now()
+        doc = {"token_hash": _digest(token), "email": email, "created_at": now, "last_used_at": now, "expires_at": now + SESSION_LIFETIME}
+        if self.db is not None:
+            self.db.auth_sessions.insert_one(dict(doc))
+        else:
+            self.memory_auth_sessions[doc["token_hash"]] = doc
+        return token
 
     def user_from_token(self, token: str) -> dict | None:
-        digest = hashlib.sha256(token.encode()).hexdigest()
+        digest = _digest(token)
+        now = _now()
         if self.db is not None:
-            # token_hash is the single-token field older accounts still carry.
-            user = self.db.users.find_one({"$or": [{"token_hashes": digest}, {"token_hash": digest}]})
+            found = self.db.auth_sessions.find_one({"token_hash": digest})
         else:
-            user = next((item for item in self.memory_users.values() if digest in item.get("token_hashes", [])), None)
-        if not user:
+            found = self.memory_auth_sessions.get(digest)
+        if not found:
             return None
-        return {"name": user["name"], "email": user["email"], "role": user.get("role") or "candidate"}
+        if found["expires_at"] <= now or found["last_used_at"] + SESSION_IDLE <= now:
+            self.revoke_auth_session(token)
+            return None
+        if now - found["last_used_at"] >= SESSION_TOUCH_EVERY:
+            if self.db is not None:
+                self.db.auth_sessions.update_one({"token_hash": digest}, {"$set": {"last_used_at": now}})
+            else:
+                found["last_used_at"] = now
+        user = self.find_user(found["email"])
+        return self.public_user(user) if user else None
+
+    def revoke_auth_session(self, token: str) -> None:
+        if self.db is not None:
+            self.db.auth_sessions.delete_one({"token_hash": _digest(token)})
+        else:
+            self.memory_auth_sessions.pop(_digest(token), None)
+
+    def revoke_auth_sessions(self, email: str, keep_token: str | None = None) -> None:
+        """Sign the user out everywhere, except the device holding `keep_token`."""
+        keep = _digest(keep_token) if keep_token else None
+        if self.db is not None:
+            self.db.auth_sessions.delete_many({"email": email, "token_hash": {"$ne": keep}})
+            return
+        for digest in [d for d, s in self.memory_auth_sessions.items() if s["email"] == email and d != keep]:
+            del self.memory_auth_sessions[digest]
 
     def save_session(self, session) -> None:
         data = {

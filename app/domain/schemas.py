@@ -1,7 +1,8 @@
+import re
 from enum import Enum
 from typing import Literal
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class ProctorEventType(str, Enum):
@@ -85,17 +86,47 @@ class VisionObservationRequest(BaseModel):
     source: str = Field(default="client_vision", max_length=60)
 
 
+EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+
+def _trimmed(value: object) -> object:
+    return value.strip() if isinstance(value, str) else value
+
+
 class RegisterRequest(BaseModel):
     name: str = Field(min_length=2, max_length=100)
     email: str = Field(min_length=5, max_length=254)
     password: str = Field(min_length=8, max_length=128)
     role: Literal["candidate", "admin"] = "candidate"
-    admin_access_code: str = ""
+    admin_access_code: str = Field(default="", max_length=200)
+
+    @field_validator("name", "email", mode="before")
+    @classmethod
+    def trim(cls, value: object) -> object:
+        return _trimmed(value)
+
+    @field_validator("email")
+    @classmethod
+    def valid_email(cls, value: str) -> str:
+        if not EMAIL_PATTERN.match(value):
+            raise ValueError("Enter a valid email address")
+        return value.lower()
 
 
 class LoginRequest(BaseModel):
-    email: str
-    password: str
+    email: str = Field(max_length=254)
+    password: str = Field(max_length=128)
+
+    @field_validator("email", mode="before")
+    @classmethod
+    def normalize_email(cls, value: object) -> object:
+        trimmed = _trimmed(value)
+        return trimmed.lower() if isinstance(trimmed, str) else trimmed
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str = Field(max_length=128)
+    new_password: str = Field(min_length=8, max_length=128)
 
 
 class CreateInterviewRequest(BaseModel):

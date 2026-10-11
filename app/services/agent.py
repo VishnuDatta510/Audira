@@ -188,8 +188,14 @@ class InterviewAgent:
             now = time.monotonic()
             ready = [p for p in providers if self._benched_until.get(p[0], 0.0) <= now] or providers
             for name, model, client in ready:
-                # gpt-oss spends max_tokens on hidden reasoning and then returns an empty reply.
-                request = {"max_completion_tokens": max_tokens, "reasoning_effort": "low"} if name == "groq" else {"max_tokens": max_tokens}
+                # Reasoning models spend max_tokens on hidden thinking and then return an empty or cut-off
+                # reply: gpt-oss on Groq gets low effort, and Gemini's thinking is turned off.
+                if name == "groq":
+                    request = {"max_completion_tokens": max_tokens, "reasoning_effort": "low"}
+                elif name == "gemini":
+                    request = {"max_tokens": max_tokens, "reasoning_effort": "none"}
+                else:
+                    request = {"max_tokens": max_tokens}
                 try:
                     response = client.chat.completions.create(model=model, messages=messages, temperature=temperature, **request)
                 except Exception as exc:

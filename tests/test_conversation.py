@@ -32,7 +32,7 @@ def _answer(session_id: str, text: str) -> dict:
 def test_round_follows_up_then_moves_on_and_rates_each_skill():
     session_id = _session()
     started = client.post(f"/api/sessions/{session_id}/section", json={"section": "project"}).json()
-    assert started["question"].startswith("Hi, thanks for joining.")
+    assert started["question"].startswith("Let's start with your projects. Can you walk me through Skill 1")
     assert started["topic"] == "Skill 1" and started["history"] == []
 
     first = _answer(session_id, "I built a Flask API for bookings.")

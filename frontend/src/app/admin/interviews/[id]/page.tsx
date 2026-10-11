@@ -89,7 +89,7 @@ function Board({ id }: { id: string }) {
       <div className="mt-10">
         {attempts.error && !attempts.data && <PageError message={attempts.error} onRetry={attempts.reload} />}
         {!attempts.data && !attempts.error && <PageLoading label="Loading attempts" />}
-        {attempts.data && <Scoreboard attempts={attempts.data} />}
+        {attempts.data && <Scoreboard interviewId={id} attempts={attempts.data} />}
       </div>
 
       {interview.data.coding_problem && <CodingPreview problem={interview.data.coding_problem} />}

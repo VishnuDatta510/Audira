@@ -11,6 +11,7 @@ import pytest
 
 from app.core.config import settings
 from app.services.agent import agent
+from app.services.auth import reset_throttles
 
 _counter = itertools.count(1)
 
@@ -61,10 +62,11 @@ def _interviewer_turn(user: str) -> str:
 def scripted_reply(system: str, user: str, max_tokens: int, temperature: float, **_extra) -> str:
     if "reference_python" in user:
         return json.dumps(_AUTHORED_PROBLEM)
-    if '"opening"' in user:
+    # The round planner returns topics only; the opening line is written in code.
+    if '{"topics": [{"skill"' in user:
         count = int(re.search(r"Plan (\d+) topics", user).group(1))
         topics = [{"skill": f"Skill {i + 1}", "why": "The job needs it.", "angle": "Ask for an example."} for i in range(count)]
-        return json.dumps({"topics": topics, "opening": f"Hi, thanks for joining. Scripted opening {next(_counter)}?"})
+        return json.dumps({"topics": topics})
     if '"decision"' in user:
         return _interviewer_turn(user)
     if '"skills": [' in user:
@@ -96,3 +98,4 @@ def scripted_reply(system: str, user: str, max_tokens: int, temperature: float, 
 def offline(monkeypatch):
     monkeypatch.setattr(settings, "code_runner", "local")
     monkeypatch.setattr(agent, "_chat", scripted_reply)
+    reset_throttles()

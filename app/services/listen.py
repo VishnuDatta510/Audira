@@ -121,10 +121,11 @@ async def _close_upstream(upstream) -> None:
         logger.warning("cartesia listen socket close failed", exc_info=True)
 
 
-async def bridge_listen(websocket: WebSocket, session_id: str) -> None:
-    await websocket.accept()
+async def bridge_listen(websocket: WebSocket, session_id: str, subprotocol: str | None = None, denied: str | None = None) -> None:
+    """`denied` is why the caller may not use this session, already checked by the route."""
+    await websocket.accept(subprotocol=subprotocol)
     lock = asyncio.Lock()
-    blocked = listen_block(session_id)
+    blocked = denied or listen_block(session_id)
     if blocked:
         await _send(websocket, {"type": "error", "message": blocked}, lock)
         await _close_client(websocket)

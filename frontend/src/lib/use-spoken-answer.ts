@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { listenSocketUrl } from "@/lib/api";
+import { listenSocketProtocols, listenSocketUrl } from "@/lib/api";
 import { startMicCapture, type MicCapture } from "@/lib/capture-pcm";
 
 export interface SpokenAnswerState {
@@ -71,7 +71,9 @@ export function useSpokenAnswer(sessionId: string): SpokenAnswerState {
   const closingRef = useRef(false);
   const listeningRef = useRef(false);
   const sessionRef = useRef(sessionId);
-  sessionRef.current = sessionId;
+  useEffect(() => {
+    sessionRef.current = sessionId;
+  }, [sessionId]);
 
   const releaseMic = useCallback(() => {
     micRef.current?.stop();
@@ -118,7 +120,7 @@ export function useSpokenAnswer(sessionId: string): SpokenAnswerState {
     setTranscript("");
     setListening(true);
 
-    const socket = new WebSocket(listenSocketUrl(sessionRef.current));
+    const socket = new WebSocket(listenSocketUrl(sessionRef.current), listenSocketProtocols());
     socket.binaryType = "arraybuffer";
     socketRef.current = socket;
 

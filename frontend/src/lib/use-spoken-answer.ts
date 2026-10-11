@@ -71,7 +71,9 @@ export function useSpokenAnswer(sessionId: string): SpokenAnswerState {
   const closingRef = useRef(false);
   const listeningRef = useRef(false);
   const sessionRef = useRef(sessionId);
-  sessionRef.current = sessionId;
+  useEffect(() => {
+    sessionRef.current = sessionId;
+  }, [sessionId]);
 
   const releaseMic = useCallback(() => {
     micRef.current?.stop();

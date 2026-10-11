@@ -33,6 +33,8 @@
   color-scheme: light;
 }
 
+/* Printed reports always use the light palette. */
+@media not print {
 .dark {
   --bg: #0d1311;
   --surface: #141c19;
@@ -61,6 +63,7 @@
   --mark-ink: #f1f8f4;
   --shadow-color: 160 40% 2%;
   color-scheme: dark;
+}
 }
 
 @theme inline {
@@ -794,4 +797,35 @@ dialog.sheet[open]::backdrop {
   display: inline-block;
   animation: transcribe 900ms var(--ease-expo) both;
   animation-delay: calc(var(--i, 0) * 60ms + 80ms);
+}
+
+/* Report export: the browser's "Save as PDF" prints the page as a clean document. */
+@page {
+  margin: 16mm 14mm;
+}
+
+@media print {
+  html,
+  body {
+    background: #fff;
+  }
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    box-shadow: none !important;
+  }
+  li {
+    break-inside: avoid;
+  }
+  h2,
+  h3 {
+    break-after: avoid;
+  }
+  pre {
+    max-height: none !important;
+    overflow: visible !important;
+    white-space: pre-wrap;
+  }
 }

@@ -10,37 +10,8 @@ import { api } from "@/lib/api";
 import { useUser } from "@/lib/auth";
 import { useLoad } from "@/lib/use-load";
 import { RoundVerdictCard, turnLabel } from "@/components/report/round-verdict";
+import { COMMUNICATION_LABELS, DownloadPdfButton, Heading, OBSERVATION_LABELS, Points, SECTION_TITLES } from "@/components/report/parts";
 import type { Report, SectionStatus, VoiceSectionId } from "@/lib/types";
-
-const SECTION_TITLES: Record<string, string> = {
-  dsa: "Coding round",
-  project: "Project round",
-  fundamentals: "Fundamentals round",
-  general: "Opening questions",
-};
-
-const OBSERVATION_LABELS: Record<string, string> = {
-  tab_hidden: "Left the interview tab",
-  fullscreen_exit: "Tried to leave full-screen",
-  face_missing: "Face not visible",
-  multiple_people: "More than one person",
-  low_light: "Lighting",
-  suspicious_gaze: "Eyes off the screen",
-  suspicious_lip_movement: "Mouth movement",
-  suspicious_phone: "Phone in view",
-  camera_unavailable: "Camera unavailable",
-  mouth_motion: "Mouth movement (for review)",
-};
-
-const COMMUNICATION_LABELS: Record<string, string> = {
-  clarity: "Clarity",
-  answer_structure: "Structure",
-  evidence: "Evidence",
-};
-
-function Heading({ children }: { children: React.ReactNode }) {
-  return <h2 className="font-display text-xl font-semibold text-ink">{children}</h2>;
-}
 
 function finished(status: SectionStatus): boolean {
   switch (status) {
@@ -57,19 +28,6 @@ function finished(status: SectionStatus): boolean {
   }
 }
 
-function Points({ items, tone }: { items: string[]; tone: "accent" | "amber" }) {
-  return (
-    <ul className="mt-3 space-y-2.5">
-      {items.map((item) => (
-        <li key={item} className="flex gap-3 text-[14px] leading-relaxed text-ink-2">
-          <span className={tone === "accent" ? "mt-2 size-1.5 shrink-0 rounded-full bg-accent" : "mt-2 size-1.5 shrink-0 rounded-full bg-amber"} />
-          {item}
-        </li>
-      ))}
-    </ul>
-  );
-}
-
 export default function ReportPage() {
   const { sessionId } = useParams<{ sessionId: string }>();
   const user = useUser();
@@ -77,15 +35,20 @@ export default function ReportPage() {
 
   return (
     <>
-      <SiteHeader />
+      <div className="contents print:hidden">
+        <SiteHeader />
+      </div>
       <main className="mx-auto w-full max-w-3xl flex-1 px-5 pb-24 pt-10 sm:px-8">
         {report && (
-          <Link
-            href={report.interview_id ? `/admin/interviews/${report.interview_id}` : `/session/${sessionId}`}
-            className="inline-flex items-center gap-1.5 text-[13px] font-medium text-ink-2 hover:text-ink"
-          >
-            <ArrowLeft className="size-4" /> {report.interview_id ? "Scoreboard" : "Interview map"}
-          </Link>
+          <div className="flex items-center justify-between gap-4 print:hidden">
+            <Link
+              href={report.interview_id ? `/admin/interviews/${report.interview_id}` : `/session/${sessionId}`}
+              className="inline-flex items-center gap-1.5 text-[13px] font-medium text-ink-2 hover:text-ink"
+            >
+              <ArrowLeft className="size-4" /> {report.interview_id ? "Scoreboard" : "Interview map"}
+            </Link>
+            <DownloadPdfButton fileName={`${report.candidate_name} - ${report.role} - Audira report`} />
+          </div>
         )}
         {error && !report && (
           <PageError
@@ -302,6 +265,10 @@ function ReportBody({ report }: { report: Report }) {
           </ul>
         )}
       </section>
+
+      <p className="mt-12 hidden border-t border-line pt-4 text-[11px] text-ink-3 print:block">
+        Audira interview report for {report.candidate_name}, printed {new Date().toLocaleDateString()}. Read it as evidence, not a hiring decision.
+      </p>
     </>
   );
 }

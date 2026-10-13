@@ -8,6 +8,12 @@ const WARNING_TYPES = [
   "suspicious_lip_movement",
   "suspicious_phone",
   "camera_unavailable",
+  "monitoring_lost",
+  "voice_detected",
+  "second_screen",
+  "virtual_camera",
+  "external_paste",
+  "identity_change",
 ] as const;
 
 type WarningType = (typeof WARNING_TYPES)[number];
@@ -48,6 +54,18 @@ export function describeWarning(type: string, details: string): WarningCopy {
       return { title: "Phone detected", detail: "A phone is visible in the camera." };
     case "camera_unavailable":
       return { title: "Camera unavailable", detail: details || "The camera could not keep monitoring." };
+    case "monitoring_lost":
+      return { title: "Camera stopped reporting", detail: "The server heard nothing from the camera during the coding round." };
+    case "voice_detected":
+      return { title: "Speech picked up", detail: details || "The microphone picked up speech during the coding round." };
+    case "second_screen":
+      return { title: "Second display", detail: "More than one display is connected." };
+    case "virtual_camera":
+      return { title: "Virtual camera", detail: details || "The camera looks like virtual camera software." };
+    case "external_paste":
+      return { title: "Pasted from outside", detail: details || "Text was pasted that was not copied inside the assessment." };
+    case "identity_change":
+      return { title: "Face changed", detail: details || "The face in view no longer matched the one at the start." };
     default: {
       const neverType: never = type;
       return neverType;

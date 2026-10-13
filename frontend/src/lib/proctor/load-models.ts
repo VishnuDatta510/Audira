@@ -1,6 +1,9 @@
+// Pinned to the installed package and to fixed model versions, so detection never changes under a live hiring round.
 const VISION_WASM = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1/wasm";
+const FACE_MODEL = "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task";
+const OBJECT_MODEL = "https://storage.googleapis.com/mediapipe-models/object_detector/efficientdet_lite0/int8/1/efficientdet_lite0.tflite";
 
-const MEDIAPIPE_LOG_NOISE = /^(INFO:|W\d{4}\s)|XNNPACK delegate|OpenGL error checking is disabled|Feedback manager requires a model|FaceBlendshapesGraph acceleration/;
+const MEDIAPIPE_LOG_NOISE = /^(INFO:|W\d{4}\s)|XNNPACK delegate|OpenGL error checking is disabled|Feedback manager requires a model|FaceBlendshapesGraph acceleration|GL version|Graph successfully started|Created TensorFlow Lite/;
 
 let mediapipeLogsSilenced = false;
 
@@ -17,38 +20,75 @@ export function silenceMediapipeLogs(): void {
     };
   }
 }
-const FACE_MODEL = "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/latest/face_landmarker.task";
 
-export type DetectedObject = { class: string; score: number };
+export type Landmark = { x: number; y: number; z?: number };
 
 export type FaceLandmarker = {
   detectForVideo: (video: HTMLVideoElement, timestamp: number) => {
-    faceLandmarks?: { x: number; y: number }[][];
+    faceLandmarks?: Landmark[][];
     faceBlendshapes?: { categories?: { categoryName?: string; score?: number }[] }[];
   };
-  close: () => void;
 };
 
 export type ObjectDetector = {
-  detect: (video: HTMLVideoElement) => Promise<DetectedObject[]>;
+  detectForVideo: (video: HTMLVideoElement, timestamp: number) => {
+    detections: { categories: { categoryName: string; score: number }[] }[];
+  };
 };
 
-export async function loadFaceLandmarker(): Promise<FaceLandmarker> {
+type Vision = typeof import("@mediapipe/tasks-vision");
+
+let files: Promise<{ vision: Vision; fileset: Awaited<ReturnType<Vision["FilesetResolver"]["forVisionTasks"]>> }> | null = null;
+let face: Promise<FaceLandmarker> | null = null;
+let objects: Promise<ObjectDetector> | null = null;
+
+function fileset() {
   silenceMediapipeLogs();
-  const vision = await import("@mediapipe/tasks-vision");
-  const files = await vision.FilesetResolver.forVisionTasks(VISION_WASM);
-  const landmarker = await vision.FaceLandmarker.createFromOptions(files, {
-    baseOptions: { modelAssetPath: FACE_MODEL },
-    runningMode: "VIDEO",
-    numFaces: 2,
-    outputFaceBlendshapes: true,
-  });
-  return landmarker as unknown as FaceLandmarker;
+  files ??= import("@mediapipe/tasks-vision").then(async (vision) => ({ vision, fileset: await vision.FilesetResolver.forVisionTasks(VISION_WASM) }));
+  return files;
 }
 
-export async function loadObjectDetector(): Promise<ObjectDetector> {
-  const tf = await import("@tensorflow/tfjs");
-  await tf.ready();
-  const coco = await import("@tensorflow-models/coco-ssd");
-  return coco.load() as Promise<ObjectDetector>;
+/** One instance per page, reused when monitoring restarts. A failed load clears so the next try starts fresh. */
+export function loadFaceLandmarker(): Promise<FaceLandmarker> {
+  face ??= fileset()
+    .then(async ({ vision, fileset }) => {
+      const options = { runningMode: "VIDEO" as const, numFaces: 2, outputFaceBlendshapes: true };
+      try {
+        // The GPU keeps the main thread free for the editor. Machines without WebGL fall back to the CPU.
+        return await vision.FaceLandmarker.createFromOptions(fileset, { ...options, baseOptions: { modelAssetPath: FACE_MODEL, delegate: "GPU" } });
+      } catch {
+        return await vision.FaceLandmarker.createFromOptions(fileset, { ...options, baseOptions: { modelAssetPath: FACE_MODEL, delegate: "CPU" } });
+      }
+    })
+    .then((landmarker) => landmarker as unknown as FaceLandmarker)
+    .catch((error) => {
+      face = null;
+      throw error;
+    });
+  return face;
+}
+
+export function loadObjectDetector(): Promise<ObjectDetector> {
+  objects ??= fileset()
+    .then(({ vision, fileset }) =>
+      vision.ObjectDetector.createFromOptions(fileset, {
+        baseOptions: { modelAssetPath: OBJECT_MODEL, delegate: "CPU" },
+        runningMode: "VIDEO",
+        scoreThreshold: 0.35,
+        maxResults: 6,
+        categoryAllowlist: ["person", "cell phone"],
+      }),
+    )
+    .then((detector) => detector as unknown as ObjectDetector)
+    .catch((error) => {
+      objects = null;
+      throw error;
+    });
+  return objects;
+}
+
+/** Start downloading on the screen before the coding round, so pressing the button only asks for the camera. */
+export function preloadModels(): void {
+  void loadFaceLandmarker().catch(() => undefined);
+  void loadObjectDetector().catch(() => undefined);
 }

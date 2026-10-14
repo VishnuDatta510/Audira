@@ -1,50 +1,53 @@
-from dataclasses import dataclass, field
+from datetime import datetime, timedelta, timezone
 from io import BytesIO
-from typing import Any
-from PIL import Image, ImageStat
+from uuid import uuid4
+from PIL import Image
 from app.core.config import settings
 
 
-WARNING_EVENTS = {"tab_hidden", "fullscreen_exit", "face_missing", "multiple_people", "suspicious_gaze", "suspicious_lip_movement", "suspicious_phone", "camera_unavailable"}
+# How much each warning counts toward the limit. A phone or a second person is
+# stronger evidence than a glance away, so it uses up more of the limit.
+WARNING_WEIGHTS = {
+    "tab_hidden": 1,
+    "fullscreen_exit": 1,
+    "face_missing": 1,
+    "suspicious_gaze": 1,
+    "camera_unavailable": 1,
+    "multiple_people": 2,
+    "suspicious_phone": 2,
+    "monitoring_lost": 2,
+}
+WARNING_EVENTS = set(WARNING_WEIGHTS)
+MAX_EVIDENCE = 24
+EVIDENCE_SIZE = (320, 240)
 
 
-@dataclass
-class CameraCheck:
-    lighting: str
-    warning: str | None = None
+def _now() -> datetime:
+    return datetime.now(timezone.utc)
 
 
-@dataclass
-class VisionAnalysis:
-    """Best-effort observations; never makes identity, emotion, or intent claims."""
-    available: bool
-    backend: str
-    observations: list[dict[str, Any]] = field(default_factory=list)
-    note: str = ""
-
-
-def check_lighting(uploaded_image) -> CameraCheck:
-    image = Image.open(uploaded_image).convert("L")
-    brightness = ImageStat.Stat(image).mean[0]
-    if brightness < settings.proctor_min_brightness:
-        return CameraCheck("too dark", "low_light")
-    if brightness > settings.proctor_max_brightness:
-        return CameraCheck("too bright")
-    return CameraCheck("good")
-
-
-def add_warning(session, event_type: str, details: str) -> dict:
-    event = {"type": event_type, "details": details, "observed_at": "during session"}
+def add_warning(session, event_type: str, details: str, source: str | None = None) -> dict:
+    """Record an observation. Only WARNING_EVENTS count toward the limit; the rest are for review."""
+    weight = WARNING_WEIGHTS.get(event_type, 0)
+    event = {
+        "id": uuid4().hex[:12],
+        "type": event_type,
+        "details": details,
+        "observed_at": _now().isoformat(),
+        "section": session.active_section,
+        "weight": weight,
+    }
+    if source:
+        event["source"] = source
     session.proctor_events.append(event)
-    if event_type in WARNING_EVENTS:
-        session.warnings += 1
+    session.warnings += weight
     if session.warnings >= settings.proctor_warning_limit:
         session.disqualified = True
     return {"warnings": session.warnings, "warning_limit": settings.proctor_warning_limit, "disqualified": session.disqualified, "event": event}
 
 
-def record_observation(session, event_type: str, details: str) -> dict:
-    return add_warning(session, event_type, details)
+def record_observation(session, event_type: str, details: str, source: str | None = None) -> dict:
+    return add_warning(session, event_type, details, source)
 
 
 def rising_edge(session, key: str, active: bool) -> bool:
@@ -58,23 +61,36 @@ def rising_edge(session, key: str, active: bool) -> bool:
     return active and not previous
 
 
-def analyse_image(image_bytes: bytes) -> VisionAnalysis:
-    """Optional MediaPipe face count, falling back safely to a lighting check."""
-    try:
-        image = Image.open(BytesIO(image_bytes)).convert("RGB")
-    except Exception:
-        return VisionAnalysis(False, "none", note="Frame could not be decoded.")
-    brightness = ImageStat.Stat(image.convert("L")).mean[0]
-    lighting = "too_dark" if brightness < settings.proctor_min_brightness else "too_bright" if brightness > settings.proctor_max_brightness else "good"
-    observations: list[dict[str, Any]] = [{"type": "lighting", "value": lighting, "brightness": round(brightness, 1)}]
-    try:
-        import mediapipe as mp
-        import numpy as np
-        detector = mp.solutions.face_detection.FaceDetection(model_selection=0, min_detection_confidence=0.5)
-        result = detector.process(np.asarray(image))
-        count = len(result.detections or [])
-        observations += [{"type": "face_visible", "value": count > 0}, {"type": "people_count", "value": count}]
-        detector.close()
-        return VisionAnalysis(True, "mediapipe_face_detection", observations, "Face presence/count only; gaze and mouth need time-series browser analysis.")
-    except (ImportError, AttributeError, RuntimeError) as exc:
-        return VisionAnalysis(False, "lighting_only", observations, f"Optional MediaPipe unavailable: {type(exc).__name__}.")
+def check_heartbeat(session) -> dict | None:
+    """Count one warning when the coding round runs without camera reports.
+
+    The browser posts an observation every few seconds. Silence means the page
+    was frozen, the script was stopped, or the tab was closed mid-round, and the
+    server would otherwise never hear about it.
+    """
+    dsa = session.dsa
+    if session.disqualified or session.active_section != "dsa" or not dsa or dsa.get("submitted"):
+        return None
+    started = datetime.fromisoformat(dsa["started_at"])
+    ends = started + timedelta(minutes=dsa["duration_minutes"])
+    last = datetime.fromisoformat(session.last_vision_at) if session.last_vision_at else started
+    silent = (min(_now(), ends) - max(last, started)).total_seconds()
+    if not rising_edge(session, "monitoring_lost", silent >= settings.proctor_heartbeat_seconds):
+        return None
+    return add_warning(session, "monitoring_lost", f"No camera reports for {int(silent)} seconds during the coding round.")
+
+
+def note_vision(session) -> None:
+    session.last_vision_at = _now().isoformat()
+    session.vision_latches["monitoring_lost"] = False
+
+
+def evidence_jpeg(raw: bytes) -> bytes:
+    """Re-encode an uploaded still so only a small, plain JPEG is stored."""
+    image = Image.open(BytesIO(raw))
+    image.verify()
+    image = Image.open(BytesIO(raw)).convert("RGB")
+    image.thumbnail(EVIDENCE_SIZE)
+    out = BytesIO()
+    image.save(out, "JPEG", quality=70)
+    return out.getvalue()

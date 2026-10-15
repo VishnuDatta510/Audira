@@ -17,8 +17,10 @@ class Settings(BaseSettings):
     mongodb_uri: str | None = None
     mongodb_database: str = "audira"
     proctor_warning_limit: int = 5
-    proctor_face_absence_seconds: int = 10
+    proctor_gaze_away_seconds: float = 10
     proctor_mouth_review_seconds: float = 1.5
+    proctor_voice_review_seconds: float = 2.5
+    proctor_heartbeat_seconds: int = 30
     proctor_min_brightness: int = 55
     proctor_max_brightness: int = 235
     cartesia_api_key: str = ""
@@ -34,7 +36,6 @@ class Settings(BaseSettings):
     cors_origins: str = ""
     # Optional. Example: https://.*\.vercel\.app
     cors_origin_regex: str = ""
-    admin_access_code: str = ""
 
 
 settings = Settings()

@@ -15,6 +15,11 @@ class ProctorEventType(str, Enum):
     suspicious_lip_movement = "suspicious_lip_movement"
     suspicious_phone = "suspicious_phone"
     camera_unavailable = "camera_unavailable"
+    # Logged for a person to review; these never count toward the limit.
+    second_screen = "second_screen"
+    virtual_camera = "virtual_camera"
+    external_paste = "external_paste"
+    identity_change = "identity_change"
 
 
 class StartSessionRequest(BaseModel):
@@ -83,7 +88,14 @@ class VisionObservationRequest(BaseModel):
     lighting: str | None = Field(default=None, pattern="^(good|too_dark|too_bright)$")
     gaze_away_seconds: float | None = Field(default=None, ge=0, le=300)
     mouth_motion_seconds: float | None = Field(default=None, ge=0, le=300)
+    voice_seconds: float | None = Field(default=None, ge=0, le=300)
     source: str = Field(default="client_vision", max_length=60)
+
+
+class EvidenceRequest(BaseModel):
+    event_id: str = Field(min_length=1, max_length=40)
+    # A base64 JPEG still of the moment a warning fired, about 15 KB.
+    image: str = Field(min_length=1, max_length=200_000)
 
 
 EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
@@ -97,10 +109,10 @@ class RegisterRequest(BaseModel):
     name: str = Field(min_length=2, max_length=100)
     email: str = Field(min_length=5, max_length=254)
     password: str = Field(min_length=8, max_length=128)
-    role: Literal["candidate", "admin"] = "candidate"
-    admin_access_code: str = Field(default="", max_length=200)
+    # Set when someone signs up to hire: they become the owner of a new workspace with this name.
+    workspace_name: str | None = Field(default=None, min_length=2, max_length=80)
 
-    @field_validator("name", "email", mode="before")
+    @field_validator("name", "email", "workspace_name", mode="before")
     @classmethod
     def trim(cls, value: object) -> object:
         return _trimmed(value)
@@ -122,6 +134,39 @@ class LoginRequest(BaseModel):
     def normalize_email(cls, value: object) -> object:
         trimmed = _trimmed(value)
         return trimmed.lower() if isinstance(trimmed, str) else trimmed
+
+
+MemberRole = Literal["viewer", "recruiter", "owner"]
+
+
+class WorkspaceNameRequest(BaseModel):
+    name: str = Field(min_length=2, max_length=80)
+
+    @field_validator("name", mode="before")
+    @classmethod
+    def trim(cls, value: object) -> object:
+        return _trimmed(value)
+
+
+class InviteRequest(BaseModel):
+    email: str = Field(min_length=5, max_length=254)
+    role: MemberRole = "recruiter"
+
+    @field_validator("email", mode="before")
+    @classmethod
+    def trim(cls, value: object) -> object:
+        return _trimmed(value)
+
+    @field_validator("email")
+    @classmethod
+    def valid_email(cls, value: str) -> str:
+        if not EMAIL_PATTERN.match(value):
+            raise ValueError("Enter a valid email address")
+        return value.lower()
+
+
+class MemberRoleRequest(BaseModel):
+    role: MemberRole
 
 
 class ChangePasswordRequest(BaseModel):

@@ -3,13 +3,13 @@ import math
 
 from fastapi import APIRouter, Header, HTTPException, Request
 
-from app.api.deps import access_code_ok, bearer_token, client_address, user_from_authorization
+from app.api.deps import bearer_token, client_address, user_from_authorization
 from app.domain.schemas import ChangePasswordRequest, LoginRequest, RegisterRequest
 from app.services.auth import (
-    access_code_failed,
-    access_code_wait,
     hash_password,
     needs_rehash,
+    new_workspace_made,
+    new_workspace_wait,
     password_problem,
     sign_in_failed,
     sign_in_succeeded,
@@ -36,21 +36,22 @@ def _signed_in(user: dict) -> dict:
 
 @router.post("/register")
 def register(request: RegisterRequest, http: Request):
-    if request.role == "admin":
-        address = client_address(http)
-        wait = access_code_wait(address)
+    """A candidate account, or with `workspace_name` a hiring team's first account, which owns the new workspace."""
+    address = client_address(http)
+    if request.workspace_name:
+        wait = new_workspace_wait(address)
         if wait:
             raise _too_many(wait)
-        if not access_code_ok(request.admin_access_code):
-            access_code_failed(address)
-            raise HTTPException(403, "Interviewer signup needs the access code from ADMIN_ACCESS_CODE")
     problem = password_problem(request.password, request.email)
     if problem:
         raise HTTPException(422, problem)
     try:
-        user = repository.create_user(request.name, request.email, hash_password(request.password), request.role)
+        user = repository.create_user(request.name, request.email, hash_password(request.password))
     except ValueError as exc:
         raise HTTPException(409, str(exc)) from exc
+    if request.workspace_name:
+        new_workspace_made(address)
+        repository.create_workspace(request.workspace_name, user["email"])
     return _signed_in(user)
 
 

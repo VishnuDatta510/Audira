@@ -115,9 +115,9 @@ failed_sign_ins = Throttle(limit=5, window_seconds=15 * 60)
 failed_from_address = Throttle(limit=30, window_seconds=15 * 60)
 failed_for_account = Throttle(limit=50, window_seconds=60 * 60)
 
-# Wrong interviewer access codes: per address, with a high ceiling across everyone.
-code_guesses_from_address = Throttle(limit=10, window_seconds=60 * 60)
-code_guesses = Throttle(limit=200, window_seconds=60 * 60)
+# Anyone can start a workspace, and each one can spend model calls. This counts every new
+# workspace (not failures) so one address cannot make them in bulk.
+new_workspaces_from_address = Throttle(limit=5, window_seconds=60 * 60)
 
 
 def sign_in_wait(email: str, address: str) -> int:
@@ -134,15 +134,14 @@ def sign_in_succeeded(email: str, address: str) -> None:
     failed_sign_ins.clear(f"{email}|{address}")
 
 
-def access_code_wait(address: str) -> int:
-    return max(code_guesses_from_address.wait(address), code_guesses.wait("all"))
+def new_workspace_wait(address: str) -> int:
+    return new_workspaces_from_address.wait(address)
 
 
-def access_code_failed(address: str) -> None:
-    code_guesses_from_address.fail(address)
-    code_guesses.fail("all")
+def new_workspace_made(address: str) -> None:
+    new_workspaces_from_address.fail(address)
 
 
 def reset_throttles() -> None:
-    for throttle in (failed_sign_ins, failed_from_address, failed_for_account, code_guesses_from_address, code_guesses):
+    for throttle in (failed_sign_ins, failed_from_address, failed_for_account, new_workspaces_from_address):
         throttle.reset()

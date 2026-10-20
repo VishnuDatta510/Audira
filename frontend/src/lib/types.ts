@@ -3,15 +3,23 @@ export type SectionId = "dsa" | "project" | "fundamentals";
 export type VoiceSectionId = Exclude<SectionId, "dsa">;
 export type SectionStatus = "not_started" | "in_progress" | "completed" | "skipped";
 
-export type AccountRole = "admin" | "candidate";
-export type User = { name: string; email: string; role: AccountRole; token: string };
+/** Each role can do everything the ones before it can. */
+export type MemberRole = "viewer" | "recruiter" | "owner";
+export type WorkspaceRef = { id: string; name: string; role: MemberRole };
+/** `workspace` is null for a candidate: someone who is not on a hiring team. */
+export type User = { name: string; email: string; workspace: WorkspaceRef | null; token: string };
+
+export type Member = { name: string; email: string; role: MemberRole; joined_at: string };
+export type Invite = { id: string; email: string; role: MemberRole; invited_by_name: string; created_at: string; expires_at: string };
+export type Workspace = WorkspaceRef & { members: Member[]; invites: Invite[] };
+export type InvitePreview = { workspace_name: string; email: string; role: MemberRole; invited_by_name: string; expires_at: string };
 
 export type CodeRunner = "judge0" | "local";
 
 export type AppConfig = {
   agent_model: string;
   proctor_warning_limit: number;
-  proctor_face_absence_seconds: number;
+  proctor_gaze_away_seconds: number;
   proctor_mouth_review_seconds: number;
   code_runner: CodeRunner;
 };
@@ -136,7 +144,7 @@ export type SessionSummary = {
   warnings: number;
   warning_limit: number;
   disqualified: boolean;
-  warnings_log: { type: string; details: string; observed_at?: string }[];
+  warnings_log: { type: string; details: string; observed_at?: string; weight?: number }[];
   round_scores: Partial<Record<SectionId | "general", number>>;
   /** Opened from a recruiter's link: scores and the report go to the recruiter, not the candidate. */
   recruiter_session: boolean;
@@ -198,7 +206,17 @@ export type RoundVerdict = {
   rated_by: "agent" | "answer_average";
 };
 
-export type ProctorEvent = { type: string; details: string; observed_at?: string; source?: string };
+/** Older sessions have no id, section or weight. A weight of 0 means it was noted for review and did not count. */
+export type ProctorEvent = {
+  id?: string;
+  type: string;
+  details: string;
+  observed_at?: string;
+  source?: string;
+  section?: SectionId | null;
+  weight?: number;
+  evidence?: boolean;
+};
 
 export type Report = {
   candidate_name: string;
@@ -241,6 +259,8 @@ export type PublicInterview = Omit<InterviewDraft, "job_description" | "intervie
   my_session_id?: string | null;
   /** False when the browser sent a sign-in the server no longer accepts. */
   signed_in?: boolean;
+  /** The caller is on the team running this interview, so they cannot take it. */
+  on_team?: boolean;
 };
 
 export type InterviewDetail = PublicInterview & {
@@ -292,7 +312,9 @@ export type LiveAttempt = {
   transcript: LiveTurn[];
   dsa: { title: string; language: string | null; submitted: boolean; seconds_left: number; tests_passed: number | null; tests_total: number | null } | null;
   round_scores: Partial<Record<SectionId, number>>;
-  observations: { type: string; details: string; observed_at?: string }[];
+  observations: ProctorEvent[];
+  /** The candidate's camera reported in the last few seconds. */
+  camera_live: boolean;
   warnings: number;
   warning_limit: number;
   disqualified: boolean;

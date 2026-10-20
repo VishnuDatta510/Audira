@@ -14,8 +14,11 @@ import type {
   User,
   VoiceQuestion,
   VoiceSectionId,
-  AccountRole,
   Attempt,
+  Invite,
+  InvitePreview,
+  MemberRole,
+  Workspace,
   InterviewDetail,
   InterviewDraft,
   LiveAttempt,
@@ -88,10 +91,12 @@ function safeJson(text: string): unknown {
 const post = <T>(path: string, body?: unknown) =>
   request<T>(path, { method: "POST", body: body instanceof FormData ? body : JSON.stringify(body ?? {}) });
 
-async function audioRequest(path: string, signal?: AbortSignal): Promise<Blob> {
+const del = <T>(path: string) => request<T>(path, { method: "DELETE" });
+
+async function blobRequest(path: string, accept: string, signal?: AbortSignal): Promise<Blob> {
   let response: Response;
   try {
-    response = await fetch(endpoint(path), { headers: { Accept: "audio/wav", ...authHeader() }, signal });
+    response = await fetch(endpoint(path), { headers: { Accept: accept, ...authHeader() }, signal });
   } catch (error) {
     if (error instanceof DOMException && error.name === "AbortError") throw error;
     throw new ApiError(UNREACHABLE, 0);
@@ -101,8 +106,12 @@ async function audioRequest(path: string, signal?: AbortSignal): Promise<Blob> {
     const body = text ? safeJson(text) : null;
     throw new ApiError(messageFrom(body, `Request failed (${response.status})`), response.status);
   }
-  const audio = await response.blob();
-  if (!audio.size) throw new ApiError("Question voice came back empty.", response.status);
+  return response.blob();
+}
+
+async function audioRequest(path: string, signal?: AbortSignal): Promise<Blob> {
+  const audio = await blobRequest(path, "audio/wav", signal);
+  if (!audio.size) throw new ApiError("Question voice came back empty.", 200);
   return audio;
 }
 
@@ -131,13 +140,24 @@ export const api = {
   config: () => request<AppConfig>("/config"),
   languages: () => request<Language[]>("/languages"),
 
-  register: (name: string, email: string, password: string, role: AccountRole = "candidate", adminAccessCode = "") =>
-    post<User>("/auth/register", { name, email, password, role, admin_access_code: adminAccessCode }),
+  /** With `workspaceName`, the new account owns a new workspace. Without it, it is a candidate account. */
+  register: (name: string, email: string, password: string, workspaceName?: string) =>
+    post<User>("/auth/register", { name, email, password, workspace_name: workspaceName || null }),
   login: (email: string, password: string) => post<User>("/auth/login", { email, password }),
   me: () => request<Omit<User, "token">>("/auth/me"),
   signOutEverywhere: () => post<{ signed_out: boolean }>("/auth/logout-all"),
   changePassword: (currentPassword: string, newPassword: string) =>
     post<{ changed: boolean }>("/auth/password", { current_password: currentPassword, new_password: newPassword }),
+
+  workspace: () => request<Workspace>("/workspace"),
+  createWorkspace: (name: string) => post<Omit<User, "token">>("/workspace", { name }),
+  renameWorkspace: (name: string) => post<{ name: string }>("/workspace/name", { name }),
+  invite: (email: string, role: MemberRole) => post<Invite & { token: string }>("/workspace/invites", { email, role }),
+  revokeInvite: (id: string) => del<{ revoked: boolean }>(`/workspace/invites/${id}`),
+  setMemberRole: (email: string, role: MemberRole) => post<{ role: MemberRole }>(`/workspace/members/${encodeURIComponent(email)}/role`, { role }),
+  removeMember: (email: string) => del<{ removed: boolean }>(`/workspace/members/${encodeURIComponent(email)}`),
+  previewInvite: (token: string) => request<InvitePreview>(`/invites/${encodeURIComponent(token)}`),
+  acceptInvite: (token: string) => post<Omit<User, "token">>(`/invites/${encodeURIComponent(token)}/accept`),
 
   interviews: () => request<InterviewDetail[]>("/admin/interviews"),
   interview: (id: string) => request<InterviewDetail>(`/admin/interviews/${id}`),
@@ -178,4 +198,7 @@ export const api = {
     post<Parameters<typeof toProctorAck>[0]>(`/sessions/${id}/proctor-events`, { event_type: eventType, details }).then(toProctorAck),
   visionObservation: (id: string, observation: Record<string, unknown>) =>
     post<Parameters<typeof toProctorAck>[0]>(`/sessions/${id}/vision-observations`, observation).then(toProctorAck),
+  uploadEvidence: (id: string, eventId: string, image: string) => post<{ recorded: boolean }>(`/sessions/${id}/evidence`, { event_id: eventId, image }),
+  evidence: (id: string, eventId: string, signal?: AbortSignal) =>
+    blobRequest(`/sessions/${encodeURIComponent(id)}/evidence/${encodeURIComponent(eventId)}`, "image/jpeg", signal),
 };

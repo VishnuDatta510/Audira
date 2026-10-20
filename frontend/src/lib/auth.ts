@@ -2,7 +2,7 @@
 
 import { useSyncExternalStore } from "react";
 import { migrateLegacyStorage } from "@/lib/legacy-storage";
-import type { User } from "@/lib/types";
+import type { MemberRole, User } from "@/lib/types";
 
 const KEY = "audira:user";
 const listeners = new Set<() => void>();
@@ -27,6 +27,12 @@ function subscribe(listener: () => void) {
   };
 }
 
+/** Stores a fresh copy of the signed-in user from the server, keeping this device's token. */
+export function updateUser(me: Omit<User, "token">) {
+  const token = currentToken();
+  if (token) setUser({ ...me, token });
+}
+
 export function currentToken(): string | null {
   const raw = read();
   if (!raw) return null;
@@ -46,4 +52,12 @@ export function useUser(): User | null {
   } catch {
     return null;
   }
+}
+
+const RANK: Record<MemberRole, number> = { viewer: 0, recruiter: 1, owner: 2 };
+
+/** Whether the user holds at least `minimum` in their workspace. A candidate holds nothing. */
+export function hasRole(user: User | null, minimum: MemberRole): boolean {
+  const role = user?.workspace?.role;
+  return role !== undefined && RANK[role] >= RANK[minimum];
 }

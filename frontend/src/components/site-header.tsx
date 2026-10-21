@@ -31,7 +31,12 @@ export function SiteHeader() {
     await signOut();
     router.replace("/");
   };
-  const links = user?.role === "admin" ? [{ href: "/admin", label: "Interviews" }] : [];
+  const links = user?.workspace
+    ? [
+        { href: "/admin", label: "Interviews" },
+        { href: "/team", label: "Team" },
+      ]
+    : [];
   return (
     <header
       className={cx(
@@ -40,7 +45,8 @@ export function SiteHeader() {
       )}
     >
       <div className="mx-auto flex h-16 max-w-7xl items-center gap-3 px-5 sm:gap-8 sm:px-8">
-        <Brand />
+        {/* On phones the nav needs the room, so the mark stands alone. */}
+        <Brand className={cx("shrink-0", links.length > 0 && "max-sm:*:last:hidden")} />
         <nav className="flex items-center gap-1">
           {links.map((item) => {
             const active = pathname.startsWith(item.href);

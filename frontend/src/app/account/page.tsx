@@ -3,10 +3,12 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { SiteHeader } from "@/components/site-header";
+import { Badge } from "@/components/ui/badge";
 import { Button, LinkButton } from "@/components/ui/button";
 import { Field, PasswordInput } from "@/components/ui/field";
 import { api } from "@/lib/api";
 import { setUser, useUser } from "@/lib/auth";
+import { roleHint, roleLabel } from "@/lib/format";
 import { useHydrated } from "@/lib/use-hydrated";
 
 export default function AccountPage() {
@@ -29,14 +31,34 @@ export default function AccountPage() {
         {ready && user && (
           <>
             <p className="mt-3 text-[15px] leading-relaxed text-ink-2">
-              {user.name} · {user.email} · {user.role === "admin" ? "Interviewer" : "Candidate"}
+              {user.name} · {user.email}
             </p>
+            <WorkspaceCard />
             <ChangePassword />
             <SignOutEverywhere />
           </>
         )}
       </main>
     </>
+  );
+}
+
+function WorkspaceCard() {
+  const user = useUser();
+  const workspace = user?.workspace;
+  return (
+    <section className="rise mt-10 flex flex-wrap items-center gap-4 rounded-3xl border border-line bg-surface p-6 shadow-lift sm:p-8">
+      <div className="min-w-0 flex-1">
+        <h2 className="font-display text-xl font-semibold text-ink">{workspace ? workspace.name : "No hiring team"}</h2>
+        <p className="mt-1 text-[13px] text-ink-3">
+          {workspace ? roleHint[workspace.role] + "." : "You take interviews from the links recruiters send. Start a workspace to publish your own."}
+        </p>
+      </div>
+      {workspace && <Badge tone={workspace.role === "owner" ? "accent" : "neutral"}>{roleLabel[workspace.role]}</Badge>}
+      <LinkButton href={workspace ? "/team" : "/admin"} variant="secondary" size="sm">
+        {workspace ? "Manage team" : "Start a workspace"}
+      </LinkButton>
+    </section>
   );
 }
 
@@ -70,7 +92,7 @@ function ChangePassword() {
   }
 
   return (
-    <form onSubmit={submit} noValidate className="mt-10 space-y-5 rounded-3xl border border-line bg-surface p-6 shadow-lift sm:p-8">
+    <form onSubmit={submit} noValidate className="mt-6 space-y-5 rounded-3xl border border-line bg-surface p-6 shadow-lift sm:p-8">
       <div>
         <h2 className="font-display text-xl font-semibold text-ink">Change password</h2>
         <p className="mt-1 text-[13px] text-ink-3">Every other device is signed out. This one stays signed in.</p>

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { LinkButton } from "@/components/ui/button";
 import { useUser } from "@/lib/auth";
@@ -20,12 +21,16 @@ export function HomeActions({
   const user = useUser();
   const ready = useHydrated();
 
-  if (ready && user?.role === "candidate") {
+  if (ready && user && !user.workspace) {
     return (
       <div className={cx("max-w-lg rounded-2xl border border-line bg-surface p-5", className)}>
         <p className="font-display text-lg font-semibold text-ink">Signed in as {user.name}</p>
         <p className="mt-1 text-sm leading-relaxed text-ink-2">
-          Open the interview link your recruiter sent you. The interview starts from that page.
+          Open the interview link your recruiter sent you. The interview starts from that page. Hiring?{" "}
+          <Link href="/admin" className="font-medium text-ink underline-offset-4 hover:underline">
+            Start a workspace
+          </Link>
+          .
         </p>
       </div>
     );
@@ -37,7 +42,7 @@ export function HomeActions({
         size="lg"
         className={cx("group", inverse && "bg-field-ink! text-field! shadow-none! hover:bg-white!")}
       >
-        {ready && user?.role === "admin" ? "Your interviews" : "Publish an interview"}
+        {ready && user?.workspace ? "Your interviews" : "Publish an interview"}
         <ArrowRight className="size-4 transition-transform duration-300 ease-expo group-hover:translate-x-0.5" />
       </LinkButton>
       {sampleHref && (

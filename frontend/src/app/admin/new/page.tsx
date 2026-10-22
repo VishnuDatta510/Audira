@@ -11,7 +11,7 @@ import { Field, Input, Slider, Textarea } from "@/components/ui/field";
 import { Segmented } from "@/components/ui/segmented";
 import { Switch } from "@/components/ui/switch";
 import { api } from "@/lib/api";
-import { useUser } from "@/lib/auth";
+import { hasRole, useUser } from "@/lib/auth";
 import { useHydrated } from "@/lib/use-hydrated";
 import type { Difficulty, InterviewDraft } from "@/lib/types";
 
@@ -64,12 +64,12 @@ export default function NewInterviewPage() {
     }
   }
 
-  if (!ready || user?.role !== "admin") {
+  if (!ready || !hasRole(user, "recruiter")) {
     return (
       <>
         <SiteHeader />
         <main className="mx-auto w-full max-w-3xl flex-1 px-5 pb-24 pt-14 sm:px-8">
-          {ready && <InterviewerGate next="/admin/new" />}
+          {ready && <InterviewerGate next="/admin/new" minimum="recruiter" />}
         </main>
       </>
     );

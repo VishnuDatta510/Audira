@@ -10,11 +10,11 @@ import { PageError, PageLoading } from "@/components/page-state";
 import { LinkButton } from "@/components/ui/button";
 import { DifficultyBadge } from "@/components/ui/badge";
 import { api } from "@/lib/api";
-import { useUser } from "@/lib/auth";
+import { hasRole, useUser } from "@/lib/auth";
 import { useHydrated } from "@/lib/use-hydrated";
 import { useLoad } from "@/lib/use-load";
 
-function InterviewList() {
+function InterviewList({ canPublish }: { canPublish: boolean }) {
   const { data, error, reload } = useLoad(() => api.interviews(), "interviews");
   if (error && !data) return <PageError message={error} onRetry={reload} />;
   if (!data) return <PageLoading label="Loading interviews" />;
@@ -23,11 +23,17 @@ function InterviewList() {
       <div className="rise mt-12 flex flex-col items-center rounded-3xl border border-dashed border-line-strong px-6 py-16 text-center">
         <AudiraMark live className="size-14 animate-pop" />
         <p className="mt-6 font-display text-xl font-semibold text-ink">No interviews yet</p>
-        <p className="mt-2 max-w-sm text-sm leading-relaxed text-ink-2">The first one takes the job description and the criteria you want the agent to follow.</p>
-        <LinkButton href="/admin/new" className="mt-6">
-          <Plus className="size-4" />
-          New interview
-        </LinkButton>
+        <p className="mt-2 max-w-sm text-sm leading-relaxed text-ink-2">
+          {canPublish
+            ? "The first one takes the job description and the criteria you want the agent to follow."
+            : "When a recruiter on your team publishes one, it shows up here."}
+        </p>
+        {canPublish && (
+          <LinkButton href="/admin/new" className="mt-6">
+            <Plus className="size-4" />
+            New interview
+          </LinkButton>
+        )}
       </div>
     );
   }
@@ -69,12 +75,17 @@ export default function AdminHome() {
       <main className="mx-auto w-full max-w-4xl flex-1 px-5 pb-24 pt-14 sm:px-8">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
+            {ready && user?.workspace && (
+              <p className="rise mb-3 text-[12px] font-medium uppercase tracking-wide text-ink-3">{user.workspace.name}</p>
+            )}
             <h1 className="font-display text-[44px] font-semibold leading-none tracking-[-0.03em] text-ink">Interviews</h1>
             <p className="mt-3 max-w-xl text-[15px] leading-relaxed text-ink-2">
-              Publish a job description. The interview agent writes the coding problem and the spoken rounds, then you share one link.
+              {ready && hasRole(user, "viewer") && !hasRole(user, "recruiter")
+                ? "Every interview your team publishes, with its scoreboard and each candidate's report."
+                : "Publish a job description. The interview agent writes the coding problem and the spoken rounds, then you share one link."}
             </p>
           </div>
-          {user?.role === "admin" && (
+          {ready && hasRole(user, "recruiter") && (
             <LinkButton href="/admin/new" className="group">
               <Plus className="size-4 transition-transform duration-500 ease-spring group-hover:rotate-90" />
               New interview
@@ -82,8 +93,8 @@ export default function AdminHome() {
           )}
         </div>
         {!ready && <PageLoading label="Loading interviews" />}
-        {ready && user?.role !== "admin" && <InterviewerGate next="/admin" />}
-        {ready && user?.role === "admin" && <InterviewList />}
+        {ready && !hasRole(user, "viewer") && <InterviewerGate next="/admin" />}
+        {ready && hasRole(user, "viewer") && <InterviewList canPublish={hasRole(user, "recruiter")} />}
       </main>
     </>
   );

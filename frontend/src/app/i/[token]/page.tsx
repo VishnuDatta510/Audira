@@ -72,11 +72,11 @@ export default function InterviewLinkPage() {
                   Sign in
                 </LinkButton>
               </div>
-            ) : user.role === "admin" ? (
+            ) : data.on_team ? (
               <div className="mt-10 rounded-2xl border border-line bg-surface p-6">
                 <p className="font-display text-lg font-semibold text-ink">This is the candidate&apos;s page</p>
                 <p className="mt-1 text-sm text-ink-2">
-                  You are signed in as an interviewer ({user.email}). Candidates open this link and sign in with their own account. Attempts show up on your scoreboard.
+                  You are on {user.workspace?.name ?? "the team"}, which runs this interview ({user.email}). Candidates open this link and sign in with their own account. Attempts show up on your scoreboard.
                 </p>
                 <LinkButton href="/admin" variant="secondary" className="mt-5">
                   Back to your interviews

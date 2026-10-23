@@ -10,7 +10,8 @@ import { api } from "@/lib/api";
 import { useUser } from "@/lib/auth";
 import { useLoad } from "@/lib/use-load";
 import { RoundVerdictCard, turnLabel } from "@/components/report/round-verdict";
-import { COMMUNICATION_LABELS, DownloadPdfButton, Heading, OBSERVATION_LABELS, Points, SECTION_TITLES } from "@/components/report/parts";
+import { ObservationList } from "@/components/report/observation-list";
+import { COMMUNICATION_LABELS, DownloadPdfButton, Heading, Points, SECTION_TITLES } from "@/components/report/parts";
 import type { Report, SectionStatus, VoiceSectionId } from "@/lib/types";
 
 function finished(status: SectionStatus): boolean {
@@ -55,22 +56,22 @@ export default function ReportPage() {
             message={error}
             onRetry={reload}
             action={
-              user?.role !== "admin" ? (
+              !user?.workspace ? (
                 <LinkButton href={`/sign-in?next=${encodeURIComponent(`/report/${sessionId}`)}`} size="sm">
-                  Sign in as the interviewer
+                  Sign in with your team account
                 </LinkButton>
               ) : null
             }
           />
         )}
         {!report && !error && <PageLoading label="Building the report" />}
-        {report && <ReportBody report={report} />}
+        {report && <ReportBody report={report} sessionId={sessionId} />}
       </main>
     </>
   );
 }
 
-function ReportBody({ report }: { report: Report }) {
+function ReportBody({ report, sessionId }: { report: Report; sessionId: string }) {
   const scores = Object.entries(report.round_scores);
   const communication = Object.entries(report.communication_assessment).filter(([, text]) => text);
   const observations = report.integrity_observations.filter((o) => o.type !== "vision_check");
@@ -249,21 +250,7 @@ function ReportBody({ report }: { report: Report }) {
       <section className="mt-12">
         <Heading>Monitoring observations</Heading>
         <p className="mt-1.5 text-[13px] text-ink-3">Recorded for a person to review. None of these is proof of misconduct.</p>
-        {observations.length === 0 ? (
-          <p className="mt-4 text-[15px] text-ink-2">Nothing was observed.</p>
-        ) : (
-          <ul className="mt-4 divide-y divide-line rounded-xl border border-line bg-surface">
-            {observations.map((o, i) => (
-              <li key={i} className="flex flex-wrap items-baseline gap-x-4 gap-y-1 px-5 py-3">
-                <span className="text-sm font-medium text-ink">{OBSERVATION_LABELS[o.type] ?? o.type}</span>
-                <span className="flex-1 text-[13px] text-ink-2">{o.details}</span>
-                {o.observed_at && o.observed_at.includes("T") && (
-                  <span className="font-mono text-xs text-ink-3">{new Date(o.observed_at).toLocaleTimeString()}</span>
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
+        <ObservationList sessionId={sessionId} observations={observations} empty="Nothing was observed." />
       </section>
 
       <p className="mt-12 hidden border-t border-line pt-4 text-[11px] text-ink-3 print:block">

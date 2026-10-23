@@ -20,7 +20,13 @@ export const OBSERVATION_LABELS: Record<string, string> = {
   suspicious_lip_movement: "Mouth movement",
   suspicious_phone: "Phone in view",
   camera_unavailable: "Camera unavailable",
-  mouth_motion: "Mouth movement (for review)",
+  mouth_motion: "Mouth movement",
+  monitoring_lost: "Camera stopped reporting",
+  voice_detected: "Speech picked up",
+  second_screen: "Second display",
+  virtual_camera: "Virtual camera",
+  external_paste: "Pasted from outside",
+  identity_change: "Face changed",
 };
 
 export const COMMUNICATION_LABELS: Record<string, string> = {

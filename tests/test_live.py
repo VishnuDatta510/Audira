@@ -2,7 +2,7 @@ from tests.test_interviews import POSTING, _auth, _register, client, memory_db  
 
 
 def test_recruiter_watches_an_attempt_live(memory_db):
-    admin = _register("admin", "test-admin-code")
+    admin = _register("admin")
     posting = client.post("/api/admin/interviews", json=POSTING, headers=_auth(admin["token"])).json()
     student = _register("candidate")
     me = _auth(student["token"])
@@ -26,5 +26,5 @@ def test_recruiter_watches_an_attempt_live(memory_db):
     assert live["progress"]["question_number"] == 2
 
     assert client.get(live_url, headers=me).status_code == 403
-    assert client.get(live_url, headers=_auth(_register("admin", "test-admin-code")["token"])).status_code == 404
+    assert client.get(live_url, headers=_auth(_register("admin")["token"])).status_code == 404
     assert client.get(f"/api/admin/interviews/{posting['id']}/attempts/not-a-session/live", headers=_auth(admin["token"])).status_code == 404

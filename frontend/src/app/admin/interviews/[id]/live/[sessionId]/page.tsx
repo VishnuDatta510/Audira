@@ -7,13 +7,14 @@ import { ArrowLeft, ArrowRight, Code2, Eye } from "lucide-react";
 import { VoiceLoader } from "@/components/brand";
 import { InterviewerGate } from "@/components/admin/interviewer-gate";
 import { PageError, PageLoading } from "@/components/page-state";
-import { OBSERVATION_LABELS, SECTION_TITLES } from "@/components/report/parts";
+import { ObservationList } from "@/components/report/observation-list";
+import { SECTION_TITLES } from "@/components/report/parts";
 import { turnLabel } from "@/components/report/round-verdict";
 import { SiteHeader } from "@/components/site-header";
 import { LinkButton } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/badge";
 import { api } from "@/lib/api";
-import { useUser } from "@/lib/auth";
+import { hasRole, useUser } from "@/lib/auth";
 import { cx, formatClock } from "@/lib/format";
 import { useHydrated } from "@/lib/use-hydrated";
 import { useLoad } from "@/lib/use-load";
@@ -116,7 +117,7 @@ function Transcript({ live }: { live: LiveAttempt }) {
   );
 }
 
-function Panel({ live }: { live: LiveAttempt }) {
+function Panel({ live, sessionId }: { live: LiveAttempt; sessionId: string }) {
   const observations = [...live.observations].reverse();
   return (
     <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
@@ -155,6 +156,12 @@ function Panel({ live }: { live: LiveAttempt }) {
         <div className="flex items-center justify-between gap-3">
           <p className="flex items-center gap-2 text-[13px] font-medium text-ink-3">
             <Eye className="size-4" /> Monitoring
+            {live.dsa && !live.dsa.submitted && (
+              <span className={cx("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold", live.camera_live ? "bg-accent-soft text-accent" : "bg-surface-2 text-ink-3")}>
+                <span className={cx("size-1.5 rounded-full", live.camera_live ? "animate-pulse bg-accent" : "bg-ink-3")} aria-hidden />
+                {live.camera_live ? "Camera live" : "Camera quiet"}
+              </span>
+            )}
           </p>
           <span className={cx("font-mono text-[13px]", live.warnings ? "text-amber" : "text-ink-2")}>
             {live.warnings} / {live.warning_limit}
@@ -165,21 +172,9 @@ function Panel({ live }: { live: LiveAttempt }) {
             <span key={i} className={cx("h-1.5 flex-1 rounded-full transition-colors duration-500", i < live.warnings ? "bg-amber" : "bg-surface-2")} />
           ))}
         </div>
-        {observations.length === 0 ? (
-          <p className="mt-4 text-[13px] text-ink-2">Nothing observed so far.</p>
-        ) : (
-          <ul className="mt-4 max-h-80 space-y-3 overflow-auto">
-            {observations.map((o, i) => (
-              <li key={observations.length - i} className="rise text-[13px]">
-                <p className="flex items-baseline justify-between gap-3 font-medium text-ink">
-                  {OBSERVATION_LABELS[o.type] ?? o.type}
-                  {o.observed_at?.includes("T") && <span className="font-mono text-[11px] font-normal text-ink-3">{new Date(o.observed_at).toLocaleTimeString()}</span>}
-                </p>
-                <p className="mt-0.5 leading-relaxed text-ink-2">{o.details}</p>
-              </li>
-            ))}
-          </ul>
-        )}
+        <div className="max-h-[28rem] overflow-auto">
+          <ObservationList sessionId={sessionId} observations={observations} empty="Nothing observed so far." />
+        </div>
         <p className="mt-4 text-[12px] text-ink-3">Observations for a person to review, never a verdict.</p>
       </div>
     </aside>
@@ -242,7 +237,7 @@ function Live({ id, sessionId }: { id: string; sessionId: string }) {
 
       <div className="mt-10 grid gap-8 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <Transcript live={live} />
-        <Panel live={live} />
+        <Panel live={live} sessionId={sessionId} />
       </div>
     </>
   );
@@ -258,8 +253,8 @@ export default function LiveAttemptPage() {
       <SiteHeader />
       <main className="mx-auto w-full max-w-6xl flex-1 px-5 pb-24 pt-10 sm:px-8">
         {!ready && <PageLoading label="Connecting to the interview" />}
-        {ready && user?.role !== "admin" && <InterviewerGate next={`/admin/interviews/${id}/live/${sessionId}`} />}
-        {ready && user?.role === "admin" && <Live id={id} sessionId={sessionId} />}
+        {ready && !hasRole(user, "viewer") && <InterviewerGate next={`/admin/interviews/${id}/live/${sessionId}`} />}
+        {ready && hasRole(user, "viewer") && <Live id={id} sessionId={sessionId} />}
       </main>
     </>
   );

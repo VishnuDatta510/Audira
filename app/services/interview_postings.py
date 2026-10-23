@@ -75,6 +75,7 @@ def prepare_interview(admin: dict, spec: dict) -> dict:
     doc = {
         "id": str(uuid4()),
         "token": token,
+        "workspace_id": admin["workspace"]["id"],
         "created_by_email": admin["email"],
         "created_by_name": admin["name"],
         "role": spec["role"],

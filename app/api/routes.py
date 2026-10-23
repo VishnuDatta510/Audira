@@ -1,11 +1,13 @@
 import threading
 from datetime import datetime, timedelta, timezone
+import base64
+import binascii
 from fastapi import APIRouter, Header, HTTPException, UploadFile, WebSocket
 from fastapi.responses import Response
 from app.core.config import settings
-from app.domain.schemas import AnswerRequest, DSAAnswerRequest, DSAStartRequest, ProctorEventRequest, StartSessionRequest, VisionObservationRequest, SectionStartRequest
+from app.domain.schemas import AnswerRequest, DSAAnswerRequest, DSAStartRequest, EvidenceRequest, ProctorEventRequest, StartSessionRequest, VisionObservationRequest, SectionStartRequest
 from app.api.code_routes import execute, public_problem
-from app.api.deps import require_admin, user_from_authorization
+from app.api.deps import member_with, user_from_authorization
 from app.problems import problem_for_difficulty
 from app.services.prepared_problems import problem_for_session
 from app.services.assessment import evaluate_dsa_submission
@@ -15,7 +17,7 @@ from app.services.repository import repository
 from app.services.agent import agent
 from app.services import conversation
 from app.services.conversation import CONVERSATIONAL_SECTIONS
-from app.services.proctoring import WARNING_EVENTS, record_observation, rising_edge
+from app.services.proctoring import MAX_EVIDENCE, WARNING_EVENTS, check_heartbeat, evidence_jpeg, note_vision, record_observation, rising_edge
 from app.services.report import build_report
 from app.services.session_store import SECTIONS, store
 from app.services.listen import SESSION_MISSING, bridge_listen
@@ -40,7 +42,7 @@ def _lock_for(session_id: str) -> threading.Lock:
 
 @router.get("/config")
 def config():
-    return {"agent_model": agent.model, "proctor_warning_limit": settings.proctor_warning_limit, "proctor_face_absence_seconds": settings.proctor_face_absence_seconds, "proctor_mouth_review_seconds": settings.proctor_mouth_review_seconds, "code_runner": settings.code_runner}
+    return {"agent_model": agent.model, "proctor_warning_limit": settings.proctor_warning_limit, "proctor_gaze_away_seconds": settings.proctor_gaze_away_seconds, "proctor_mouth_review_seconds": settings.proctor_mouth_review_seconds, "code_runner": settings.code_runner}
 
 
 @router.post("/documents/extract")
@@ -74,16 +76,18 @@ def candidate_session(session_id: str, authorization: str | None):
         user = user_from_authorization(authorization)
         if user["email"] != session.profile.get("candidate_email"):
             raise HTTPException(403, "This interview belongs to another candidate")
+    if check_heartbeat(session):
+        repository.save_session(session)
     return session
 
 
 def recruiter_or_403(session, authorization: str | None) -> None:
-    """Only the interviewer who published the link may read an attempt's report."""
+    """Only the team that published the link may read an attempt's report."""
     if not recruiter_session(session):
         return
-    admin = require_admin(authorization)
+    member = member_with("viewer", authorization)
     interview = repository.get_interview(session.profile["interview_id"])
-    if not interview or interview.get("created_by_email") != admin["email"]:
+    if not interview or interview.get("workspace_id") != member["workspace"]["id"]:
         raise HTTPException(404, "Session not found")
 
 
@@ -127,7 +131,7 @@ def session_summary(session) -> dict:
         "warnings": session.warnings,
         "warning_limit": settings.proctor_warning_limit,
         "disqualified": session.disqualified,
-        "warnings_log": [{"type": event.get("type"), "details": event.get("details", ""), "observed_at": event.get("observed_at")} for event in session.proctor_events if event.get("type") in WARNING_EVENTS],
+        "warnings_log": [{"type": event.get("type"), "details": event.get("details", ""), "observed_at": event.get("observed_at"), "weight": event.get("weight", 1)} for event in session.proctor_events if event.get("type") in WARNING_EVENTS],
         "round_scores": {} if for_recruiter else session.round_scores,
         "recruiter_session": for_recruiter,
         "created_at": session.created_at,
@@ -353,7 +357,6 @@ def submit_dsa(session_id: str, request: DSAAnswerRequest, authorization: str | 
 def record_proctor_event(session_id: str, request: ProctorEventRequest, authorization: str | None = Header(default=None)):
     session = candidate_session(session_id, authorization)
     outcome = record_observation(session, request.event_type.value, request.details)
-    outcome["event"]["observed_at"] = store.now()
     repository.save_session(session)
     return {"recorded": True, **outcome}
 
@@ -363,37 +366,72 @@ def record_vision_observation(session_id: str, request: VisionObservationRequest
     """Persist transparent signals; no signal is proof of malpractice.
 
     A condition that stays true across polls counts once. The warning can fire
-    again only after the camera reports that the condition cleared.
+    again only after the camera reports that the condition cleared. Each post
+    is also the heartbeat that check_heartbeat waits for.
     """
     session = candidate_session(session_id, authorization)
+    note_vision(session)
     outcomes = []
     if rising_edge(session, "face_missing", request.face_visible is False):
-        outcomes.append(record_observation(session, "face_missing", "Face was not detected by the camera."))
+        outcomes.append(record_observation(session, "face_missing", "Face was not detected by the camera.", request.source))
     extra_people = request.people_count is not None and request.people_count > 1
     if rising_edge(session, "multiple_people", extra_people):
-        outcomes.append(record_observation(session, "multiple_people", f"Camera detected {request.people_count} people."))
+        outcomes.append(record_observation(session, "multiple_people", f"Camera detected {request.people_count} people.", request.source))
     poor_light = request.lighting in {"too_dark", "too_bright"}
     if rising_edge(session, "low_light", poor_light):
-        outcomes.append(record_observation(session, "low_light", f"Lighting observation: {request.lighting}."))
-    gaze_away = request.gaze_away_seconds is not None and request.gaze_away_seconds >= settings.proctor_face_absence_seconds
+        outcomes.append(record_observation(session, "low_light", f"Lighting observation: {request.lighting}.", request.source))
+    gaze_away = request.gaze_away_seconds is not None and request.gaze_away_seconds >= settings.proctor_gaze_away_seconds
     if rising_edge(session, "suspicious_gaze", gaze_away):
-        outcomes.append(record_observation(session, "suspicious_gaze", f"Off-screen gaze observed for {request.gaze_away_seconds:.1f} seconds."))
-    mouth_active = request.mouth_motion_seconds is not None and request.mouth_motion_seconds >= settings.proctor_mouth_review_seconds
-    recorded_mouth = False
+        outcomes.append(record_observation(session, "suspicious_gaze", f"Off-screen gaze observed for {request.gaze_away_seconds:.1f} seconds.", request.source))
+    # Talking is the point of the spoken rounds, so mouth and voice are only noted outside them.
+    quiet_round = session.active_section not in CONVERSATIONAL_SECTIONS
+    mouth_active = quiet_round and request.mouth_motion_seconds is not None and request.mouth_motion_seconds >= settings.proctor_mouth_review_seconds
     if rising_edge(session, "mouth_motion", mouth_active):
-        session.proctor_events.append({"type": "mouth_motion", "details": f"Mouth motion observed for {request.mouth_motion_seconds:.1f} seconds; requires human review.", "observed_at": store.now(), "source": request.source})
-        recorded_mouth = True
-    for item in outcomes:
-        item["event"]["observed_at"] = store.now()
-        item["event"]["source"] = request.source
+        record_observation(session, "mouth_motion", f"Mouth motion observed for {request.mouth_motion_seconds:.1f} seconds; requires human review.", request.source)
+    voice_active = quiet_round and request.voice_seconds is not None and request.voice_seconds >= settings.proctor_voice_review_seconds
+    if rising_edge(session, "voice", voice_active):
+        speaking = (request.mouth_motion_seconds or 0) > 0
+        who = "while the candidate's mouth was moving" if speaking else "while the candidate's mouth was still, so someone else may be talking"
+        record_observation(session, "voice_detected", f"The microphone picked up speech for {request.voice_seconds:.1f} seconds {who}.", request.source)
     repository.save_session(session)
     return {"recorded": True, "warnings": session.warnings, "warning_limit": settings.proctor_warning_limit, "disqualified": session.disqualified, "observations": outcomes}
+
+
+@router.post("/sessions/{session_id}/evidence")
+def record_evidence(session_id: str, request: EvidenceRequest, authorization: str | None = Header(default=None)):
+    """A still of the moment a warning fired, so a person can check the call."""
+    session = candidate_session(session_id, authorization)
+    event = next((item for item in session.proctor_events if item.get("id") == request.event_id), None)
+    if event is None:
+        raise HTTPException(404, "Observation not found")
+    if not event.get("evidence") and sum(1 for item in session.proctor_events if item.get("evidence")) >= MAX_EVIDENCE:
+        return {"recorded": False}
+    try:
+        jpeg = evidence_jpeg(base64.b64decode(request.image.split(",")[-1], validate=True))
+    except (binascii.Error, OSError, ValueError, SyntaxError) as exc:
+        raise HTTPException(422, "The still could not be read") from exc
+    repository.save_evidence(session.id, event["id"], jpeg)
+    event["evidence"] = True
+    repository.save_session(session)
+    return {"recorded": True}
+
+
+@router.get("/sessions/{session_id}/evidence/{event_id}")
+def evidence(session_id: str, event_id: str, authorization: str | None = Header(default=None)):
+    session = session_or_404(session_id)
+    recruiter_or_403(session, authorization)
+    jpeg = repository.load_evidence(session.id, event_id)
+    if jpeg is None:
+        raise HTTPException(404, "No still for this observation")
+    return Response(jpeg, media_type="image/jpeg", headers={"Cache-Control": "private, max-age=86400"})
 
 
 @router.get("/sessions/{session_id}/report")
 def report(session_id: str, authorization: str | None = Header(default=None)):
     session = session_or_404(session_id)
     recruiter_or_403(session, authorization)
+    if check_heartbeat(session):
+        repository.save_session(session)
     cached = session.report_cache
     built = build_report(session)
     if session.report_cache is not cached:

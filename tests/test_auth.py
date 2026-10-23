@@ -19,17 +19,18 @@ NEW_PASSWORD = "a-brand-new-secret"
 @pytest.fixture(autouse=True)
 def memory_db(monkeypatch):
     monkeypatch.setattr(repository, "db", None)
-    monkeypatch.setattr(settings, "admin_access_code", "test-admin-code")
     repository.memory_users.clear()
     repository.memory_auth_sessions.clear()
+    repository.memory_workspaces.clear()
+    repository.memory_members.clear()
 
 
 def _auth(token: str) -> dict:
     return {"Authorization": f"Bearer {token}"}
 
 
-def _register(email="ada@example.com", password=PASSWORD, role="candidate", code=""):
-    return client.post("/api/auth/register", json={"name": "Ada Lovelace", "email": email, "password": password, "role": role, "admin_access_code": code})
+def _register(email="ada@example.com", password=PASSWORD):
+    return client.post("/api/auth/register", json={"name": "Ada Lovelace", "email": email, "password": password})
 
 
 def _login(email="ada@example.com", password=PASSWORD):
@@ -78,7 +79,7 @@ def test_wrong_password_and_unknown_email_get_the_same_answer():
 def test_legacy_scrypt_password_signs_in_and_is_upgraded():
     salt = os.urandom(16)
     legacy = f"{salt.hex()}${hashlib.scrypt(PASSWORD.encode(), salt=salt, n=2**14, r=8, p=1).hex()}"
-    repository.memory_users["old@example.com"] = {"name": "Old", "email": "old@example.com", "password_hash": legacy, "role": "candidate"}
+    repository.memory_users["old@example.com"] = {"name": "Old", "email": "old@example.com", "password_hash": legacy}
     assert _login(email="old@example.com", password="wrong-password").status_code == 401
     assert _login(email="old@example.com").status_code == 200
     assert repository.memory_users["old@example.com"]["password_hash"].startswith("$argon2id$")
@@ -102,17 +103,17 @@ def _from(address: str) -> dict:
     return {"CF-Connecting-IP": address}
 
 
-def test_wrong_access_codes_are_capped_per_address(monkeypatch):
-    monkeypatch.setattr(auth.code_guesses_from_address, "limit", 2)
+def test_new_workspaces_are_capped_per_address(monkeypatch):
+    monkeypatch.setattr(auth.new_workspaces_from_address, "limit", 2)
     for i in range(2):
         response = client.post("/api/auth/register", headers=_from("203.0.113.9"), json={
-            "name": "Guesser", "email": f"guess{i}@example.com", "password": PASSWORD, "role": "admin", "admin_access_code": "wrong",
+            "name": "Team Maker", "email": f"maker{i}@example.com", "password": PASSWORD, "workspace_name": f"Team {i}",
         })
-        assert response.status_code == 403
-    real = {"name": "Real Recruiter", "email": "real@example.com", "password": PASSWORD, "role": "admin", "admin_access_code": "test-admin-code"}
-    assert client.post("/api/auth/register", headers=_from("203.0.113.9"), json=real).status_code == 429
-    # Someone else's wrong guesses do not stop a real interviewer signing up.
-    assert client.post("/api/auth/register", headers=_from("198.51.100.7"), json=real).status_code == 200
+        assert response.status_code == 200 and response.json()["workspace"]["role"] == "owner"
+    team = {"name": "Real Recruiter", "email": "real@example.com", "password": PASSWORD, "workspace_name": "Acme"}
+    assert client.post("/api/auth/register", headers=_from("203.0.113.9"), json=team).status_code == 429
+    assert "real@example.com" not in repository.memory_users
+    assert client.post("/api/auth/register", headers=_from("198.51.100.7"), json=team).status_code == 200
 
 
 def test_a_strangers_guesses_do_not_lock_out_the_owner():
@@ -158,7 +159,7 @@ def test_a_simultaneous_duplicate_signup_is_a_conflict_not_a_crash(monkeypatch):
 def test_me_logout_and_logout_all():
     first = _register().json()["token"]
     second = _login().json()["token"]
-    assert client.get("/api/auth/me", headers=_auth(first)).json() == {"name": "Ada Lovelace", "email": "ada@example.com", "role": "candidate"}
+    assert client.get("/api/auth/me", headers=_auth(first)).json() == {"name": "Ada Lovelace", "email": "ada@example.com", "workspace": None}
     assert client.post("/api/auth/logout", headers=_auth(first)).status_code == 200
     assert _me(first) == 401
     assert _me(second) == 200

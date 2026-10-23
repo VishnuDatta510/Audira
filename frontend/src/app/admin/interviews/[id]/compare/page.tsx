@@ -10,7 +10,7 @@ import { PageError, PageLoading } from "@/components/page-state";
 import { COMMUNICATION_LABELS, DownloadPdfButton, Heading, Points, SECTION_TITLES } from "@/components/report/parts";
 import { SiteHeader } from "@/components/site-header";
 import { api } from "@/lib/api";
-import { useUser } from "@/lib/auth";
+import { hasRole, useUser } from "@/lib/auth";
 import { cx } from "@/lib/format";
 import { useHydrated } from "@/lib/use-hydrated";
 import { useLoad } from "@/lib/use-load";
@@ -236,7 +236,7 @@ function CompareInner() {
   const next = `/admin/interviews/${id}/compare?a=${a ?? ""}&b=${b ?? ""}`;
 
   if (!ready) return <PageLoading label="Loading" />;
-  if (user?.role !== "admin") return <InterviewerGate next={next} />;
+  if (!hasRole(user, "viewer")) return <InterviewerGate next={next} />;
   if (!a || !b || a === b) return <PageError message="Pick two different candidates on the scoreboard to compare them." />;
   return <Comparison id={id} a={a} b={b} />;
 }

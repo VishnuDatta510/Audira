@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { PageError, PageLoading } from "@/components/page-state";
 import { DsaResultDialog } from "@/components/session/dsa-result-dialog";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
 import { cx, formatClock } from "@/lib/format";
 import { useCountdown } from "@/lib/use-countdown";
+import { useHydrated } from "@/lib/use-hydrated";
 import { useLoad } from "@/lib/use-load";
 import type { DsaSubmitResult } from "@/lib/types";
 
@@ -28,6 +29,14 @@ export default function DsaRoundPage() {
     canOpen ? sessionId : "need-devices",
   );
   const [result, setResult] = useState<DsaSubmitResult | null>(null);
+  const hydrated = useHydrated();
+  const extended = hydrated && Boolean((window.screen as Screen & { isExtended?: boolean }).isExtended);
+  const { preload, flush } = proctor;
+
+  useEffect(() => {
+    // The models download while the candidate reads, so the button only waits on the camera.
+    if (!canOpen) preload();
+  }, [canOpen, preload]);
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const submitted = Boolean(result) || Boolean(data?.dsa.submitted);
@@ -36,12 +45,13 @@ export default function DsaRoundPage() {
 
   const submit = useCallback(
     async (language: string, code: string) => {
+      await flush();
       const submission = await api.submitDsa(sessionId, language, code);
       setResult(submission);
       setDialogOpen(true);
       return submission;
     },
-    [sessionId],
+    [flush, sessionId],
   );
 
   if (!summary && !summaryError) {
@@ -59,6 +69,16 @@ export default function DsaRoundPage() {
         <p className="mt-3 text-[15px] leading-relaxed text-ink-2">
           Do this before the coding round starts. The timer begins after both are on, so the permission prompts do not count as leaving full-screen.
         </p>
+        <ul className="mt-5 space-y-2 text-[14px] leading-relaxed text-ink-2">
+          <li>The round runs full-screen. Leaving it, switching tabs, or another person or a phone in view each count as a warning.</li>
+          <li>When something is noted, a small still from the camera is saved for the recruiter to check.</li>
+          <li>Nothing here is a verdict on its own. A person reviews what the camera notes.</li>
+        </ul>
+        {extended && (
+          <p className="mt-5 rounded-lg bg-amber-soft px-3.5 py-2.5 text-[13px] leading-relaxed text-amber">
+            A second display is connected. It will be noted for the recruiter, so unplug it if you can.
+          </p>
+        )}
         <Button className="mt-6 w-fit" onClick={() => void proctor.start()} loading={proctor.starting}>
           Enable camera and mic
         </Button>

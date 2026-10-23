@@ -21,6 +21,7 @@ class Session:
     warnings: int = 0
     disqualified: bool = False
     vision_latches: dict[str, bool] = field(default_factory=dict)
+    last_vision_at: str | None = None
     round_index: int = 0
     round_scores: dict = field(default_factory=dict)
     sections: dict[str, str] = field(default_factory=_default_sections)
@@ -75,6 +76,7 @@ def session_from_saved(data: dict) -> Session:
         warnings=int(data.get("warnings") or 0),
         disqualified=bool(data.get("disqualified")),
         vision_latches={str(key): bool(value) for key, value in (data.get("vision_latches") or {}).items()},
+        last_vision_at=data.get("last_vision_at"),
         round_index=int(data.get("round_index") or 0),
         round_scores=dict(data.get("round_scores") or {}),
         sections=dict(sections),

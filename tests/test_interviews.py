@@ -27,11 +27,13 @@ SOLUTION = "import sys\na, b = map(int, sys.stdin.read().split())\nprint(a + b)\
 @pytest.fixture
 def memory_db(monkeypatch):
     monkeypatch.setattr(repository, "db", None)
-    monkeypatch.setattr(settings, "admin_access_code", "test-admin-code")
     repository.memory_users.clear()
     repository.memory_auth_sessions.clear()
     repository.memory_sessions.clear()
     repository.memory_interviews.clear()
+    repository.memory_workspaces.clear()
+    repository.memory_members.clear()
+    repository.memory_invites.clear()
     clear_authored()
 
 
@@ -39,30 +41,19 @@ def _auth(token: str) -> dict:
     return {"Authorization": f"Bearer {token}"}
 
 
-def _register(role: str, code: str = "") -> dict:
+def _register(role: str) -> dict:
+    """An "admin" signs up to hire and owns a new workspace. A "candidate" signs up on their own."""
     suffix = uuid.uuid4().hex[:8]
-    response = client.post("/api/auth/register", json={
-        "name": "Ada Admin" if role == "admin" else "Grace Hopper",
-        "email": f"{role}-{suffix}@example.com",
-        "password": "correct-horse-1",
-        "role": role,
-        "admin_access_code": code,
-    })
+    body = {"name": "Ada Admin" if role == "admin" else "Grace Hopper", "email": f"{role}-{suffix}@example.com", "password": "correct-horse-1"}
+    if role == "admin":
+        body["workspace_name"] = f"Team {suffix}"
+    response = client.post("/api/auth/register", json=body)
     assert response.status_code == 200, response.text
     return response.json()
 
 
-def test_interviewer_signup_requires_the_access_code(memory_db):
-    denied = client.post("/api/auth/register", json={
-        "name": "No Code", "email": "nocode@example.com", "password": "correct-horse-1", "role": "admin", "admin_access_code": "wrong",
-    })
-    assert denied.status_code == 403
-    candidate = _register("candidate")
-    assert candidate["role"] == "candidate" and candidate["token"]
-
-
 def test_admin_link_uses_an_authored_problem_and_lists_scores(memory_db):
-    admin = _register("admin", "test-admin-code")
+    admin = _register("admin")
     created = client.post("/api/admin/interviews", json=POSTING, headers=_auth(admin["token"]))
     assert created.status_code == 200, created.text
     posting = created.json()
@@ -131,7 +122,7 @@ def test_admin_link_uses_an_authored_problem_and_lists_scores(memory_db):
     assert row["scores"]["fundamentals"] == 76
     assert row["overall_score"] == round((row["scores"]["dsa"] + 76) / 2)
     assert row["rank"] == 1
-    stranger = _register("admin", "test-admin-code")
+    stranger = _register("admin")
     assert client.get(f"/api/admin/interviews/{posting['id']}/attempts", headers=_auth(stranger["token"])).status_code == 404
 
     assert client.get(f"/api/sessions/{session_id}/report").status_code == 401
@@ -146,7 +137,7 @@ def test_admin_link_uses_an_authored_problem_and_lists_scores(memory_db):
 
 
 def test_each_candidate_gets_one_attempt_and_only_touches_their_own(memory_db):
-    admin = _register("admin", "test-admin-code")
+    admin = _register("admin")
     posting = client.post("/api/admin/interviews", json=POSTING, headers=_auth(admin["token"])).json()
     token = posting["token"]
     resume = {"resume": "Built two Python web APIs and wrote tests for them."}
@@ -179,7 +170,7 @@ def test_signing_in_again_keeps_the_first_device_signed_in(memory_db):
     student = _register("candidate")
     again = client.post("/api/auth/login", json={"email": student["email"], "password": "correct-horse-1"}).json()
     assert again["token"] != student["token"]
-    admin = _register("admin", "test-admin-code")
+    admin = _register("admin")
     posting = client.post("/api/admin/interviews", json=POSTING, headers=_auth(admin["token"])).json()
     resume = {"resume": "Built two Python web APIs and wrote tests for them."}
     for token in (student["token"], again["token"]):

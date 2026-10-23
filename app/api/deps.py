@@ -1,17 +1,10 @@
 """Sign-in checks for interviewer and candidate routes."""
-import secrets
-
 from fastapi import Header, HTTPException, Request
 
-from app.core.config import settings
 from app.services.repository import repository
 
-
-def access_code_ok(given: str) -> bool:
-    expected = settings.admin_access_code
-    if not expected or len(given) != len(expected):
-        return False
-    return secrets.compare_digest(given, expected)
+# Each role can do everything the ones before it can.
+ROLES = ("viewer", "recruiter", "owner")
 
 
 def client_address(request: Request) -> str:
@@ -53,8 +46,36 @@ def optional_user(authorization: str | None) -> dict | None:
         return None
 
 
-def require_admin(authorization: str | None = Header(default=None)) -> dict:
+def member_with(minimum: str, authorization: str | None) -> dict:
+    """The signed-in user, when they hold at least `minimum` in their workspace.
+
+    The role is read on every request, not stored in the token, so a change or removal applies at once.
+    """
     user = user_from_authorization(authorization)
-    if user["role"] != "admin":
-        raise HTTPException(403, "This action is for interviewer accounts")
+    workspace = user["workspace"]
+    if workspace is None:
+        raise HTTPException(403, "This is for hiring teams. Create a workspace or accept an invite to one.")
+    if ROLES.index(workspace["role"]) < ROLES.index(minimum):
+        raise HTTPException(403, f"This needs the {minimum} role in {workspace['name']}.")
     return user
+
+
+def require_viewer(authorization: str | None = Header(default=None)) -> dict:
+    return member_with("viewer", authorization)
+
+
+def require_recruiter(authorization: str | None = Header(default=None)) -> dict:
+    return member_with("recruiter", authorization)
+
+
+def require_owner(authorization: str | None = Header(default=None)) -> dict:
+    return member_with("owner", authorization)
+
+
+def interview_in_workspace_or_404(interview_id: str, member: dict) -> dict:
+    """The interview, when it belongs to the caller's workspace. The workspace comes from the interview itself,
+    never from the request, and another team's interview looks the same as a missing one."""
+    interview = repository.get_interview(interview_id)
+    if not interview or interview.get("workspace_id") != member["workspace"]["id"]:
+        raise HTTPException(404, "Interview not found")
+    return interview

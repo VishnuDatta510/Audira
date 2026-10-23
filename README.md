@@ -107,7 +107,7 @@ npm install
 npm run dev
 ```
 
-Open [localhost:3000](http://localhost:3000), create an interviewer account with the `ADMIN_ACCESS_CODE` from your `.env`, publish a job, and open the link in a private window to take it as a candidate.
+Open [localhost:3000](http://localhost:3000), sign up as "I'm hiring" to get a workspace, publish a job, and open the link in a private window to take it as a candidate.
 
 <details>
 <summary>Environment variables</summary>
@@ -118,7 +118,6 @@ Open [localhost:3000](http://localhost:3000), create an interviewer account with
 | `GEMINI_API_KEY`, `GROQ_API_KEY` | Backup providers if the main one is busy             |
 | `CARTESIA_API_KEY`               | Spoken questions and live transcription              |
 | `MONGODB_URI`                    | Where interviews are stored. Leave empty to keep them in memory |
-| `ADMIN_ACCESS_CODE`              | Required to create an interviewer account            |
 
 </details>
 

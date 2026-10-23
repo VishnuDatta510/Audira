@@ -12,24 +12,29 @@ import { Segmented } from "@/components/ui/segmented";
 import { PageLoading } from "@/components/page-state";
 import { api } from "@/lib/api";
 import { setUser } from "@/lib/auth";
-import type { AccountRole } from "@/lib/types";
+import type { User } from "@/lib/types";
 
 type Mode = "sign-in" | "create";
+type Purpose = "interviewing" | "hiring";
 
-function safeNext(value: string | null, role: AccountRole): string {
+function safeNext(value: string | null, user: User): string {
   if (value && value.startsWith("/") && !value.startsWith("//")) return value;
-  return role === "admin" ? "/admin" : "/";
+  return user.workspace ? "/admin" : "/";
 }
 
 function SignInForm() {
   const router = useRouter();
-  const next = useSearchParams().get("next");
-  const [mode, setMode] = useState<Mode>("sign-in");
-  const [accountRole, setAccountRole] = useState<AccountRole>("candidate");
+  const params = useSearchParams();
+  const next = params.get("next");
+  // Someone following a team invite joins that team, so they do not start a workspace of their own.
+  const joiningTeam = next?.startsWith("/invite/") ?? false;
+  const [mode, setMode] = useState<Mode>(params.get("mode") === "create" ? "create" : "sign-in");
+  const [purpose, setPurpose] = useState<Purpose>("interviewing");
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(params.get("email") ?? "");
   const [password, setPassword] = useState("");
-  const [accessCode, setAccessCode] = useState("");
+  const [workspaceName, setWorkspaceName] = useState("");
+  const hiring = mode === "create" && purpose === "hiring" && !joiningTeam;
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -51,8 +56,8 @@ function SignInForm() {
         setError("Password must be at least 8 characters.");
         return;
       }
-      if (accountRole === "admin" && !accessCode.trim()) {
-        setError("Enter the interviewer access code.");
+      if (hiring && workspaceName.trim().length < 2) {
+        setError("Name your team or company. At least 2 characters.");
         return;
       }
     }
@@ -60,9 +65,11 @@ function SignInForm() {
     setBusy(true);
     try {
       const user =
-        mode === "create" ? await api.register(name.trim(), email.trim(), password, accountRole, accessCode.trim()) : await api.login(email.trim(), password);
+        mode === "create"
+          ? await api.register(name.trim(), email.trim(), password, hiring ? workspaceName.trim() : undefined)
+          : await api.login(email.trim(), password);
       setUser(user);
-      router.push(safeNext(next, user.role));
+      router.push(safeNext(next, user));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not sign in.");
       setBusy(false);
@@ -85,7 +92,11 @@ function SignInForm() {
               {mode === "create" ? "Create your account" : "Welcome back"}
             </h1>
             <p key={`${mode}-sub`} className="rise mt-2 text-[15px] leading-relaxed text-ink-2" style={{ "--d": "60ms" } as React.CSSProperties}>
-              {mode === "create" ? "Candidates take the interview link a recruiter sent. Interviewers publish one." : "Your account keeps interviews under your email."}
+              {mode === "create"
+                ? joiningTeam
+                  ? "Create an account with the email your invite was sent to, then you join the team."
+                  : "Candidates take the interview link a recruiter sent. Hiring teams publish one."
+                : "Your account keeps interviews under your email."}
             </p>
             <div className="mt-7">
               <Segmented
@@ -104,24 +115,28 @@ function SignInForm() {
             <div className="mt-7 space-y-4">
               {mode === "create" && (
                 <div className="rise space-y-4">
-                  {/* Segmented is not a labellable input, so it gets a plain text label instead of a dangling htmlFor */}
-                  <div className="flex flex-col gap-1.5">
-                    <p className="text-sm font-medium text-ink">I am</p>
-                    <Segmented
-                      label="Account role"
-                      value={accountRole}
-                      onChange={setAccountRole}
-                      options={[
-                        { value: "candidate", label: "Candidate" },
-                        { value: "admin", label: "Interviewer" },
-                      ]}
-                    />
-                  </div>
+                  {!joiningTeam && (
+                    // Segmented is not a labellable input, so it gets a plain text label instead of a dangling htmlFor
+                    <div className="flex flex-col items-start gap-1.5">
+                      <p className="text-sm font-medium text-ink">I&apos;m</p>
+                      <Segmented
+                        label="What the account is for"
+                        value={purpose}
+                        onChange={setPurpose}
+                        options={[
+                          { value: "interviewing", label: "Interviewing" },
+                          { value: "hiring", label: "Hiring" },
+                        ]}
+                      />
+                    </div>
+                  )}
                   <Field label="Name">{(id) => <Input id={id} value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" />}</Field>
-                  {accountRole === "admin" && (
+                  {hiring && (
                     <div className="rise">
-                      <Field label="Interviewer access code" hint="Ask whoever runs this Audira workspace for the code.">
-                        {(id) => <Input id={id} value={accessCode} onChange={(e) => setAccessCode(e.target.value)} autoComplete="off" />}
+                      <Field label="Team or company" hint="This is your workspace. You can invite the rest of your team after.">
+                        {(id) => (
+                          <Input id={id} value={workspaceName} onChange={(e) => setWorkspaceName(e.target.value)} autoComplete="organization" placeholder="Acme Hiring" />
+                        )}
                       </Field>
                     </div>
                   )}
@@ -151,7 +166,7 @@ function SignInForm() {
             </Button>
             {next && (
               <p className="mt-4 text-center text-[13px] text-ink-3">
-                You will return to the interview after signing in.{" "}
+                {joiningTeam ? "You will return to your invite after signing in." : "You will return to the interview after signing in."}{" "}
                 <Link href={next} className="text-ink-2 underline">
                   Cancel
                 </Link>

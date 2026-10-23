@@ -83,3 +83,64 @@ def test_quiet_frames_and_short_mouth_motion_are_not_stored():
     observe(active, mouth_motion_seconds=3)
     assert [event["type"] for event in stored.proctor_events] == ["mouth_motion"]
     assert stored.warnings == 0
+
+
+def test_a_phone_uses_two_warnings_and_a_glance_one():
+    active = session_id()
+    phone = client.post(f"/api/sessions/{active}/proctor-events", json={"event_type": "suspicious_phone", "details": "phone"}).json()
+    assert phone["warnings"] == 2
+    assert phone["event"]["weight"] == 2
+    review = client.post(f"/api/sessions/{active}/proctor-events", json={"event_type": "second_screen", "details": "extended"}).json()
+    assert review["warnings"] == 2
+    assert review["event"]["weight"] == 0
+
+
+def test_a_silent_coding_round_counts_once_as_lost_monitoring():
+    from datetime import datetime, timedelta, timezone
+    from app.services.session_store import store
+
+    active = session_id()
+    assert client.post(f"/api/sessions/{active}/dsa/start", json={}).status_code == 200
+    observe(active)
+    stored = store.get(active)
+    stored.dsa["started_at"] = (datetime.now(timezone.utc) - timedelta(minutes=2)).isoformat()
+    stored.last_vision_at = (datetime.now(timezone.utc) - timedelta(seconds=45)).isoformat()
+    first = client.get(f"/api/sessions/{active}").json()
+    second = client.get(f"/api/sessions/{active}").json()
+    assert first["warnings"] == second["warnings"] == 2
+    assert [event["type"] for event in first["warnings_log"]] == ["monitoring_lost"]
+    observe(active)
+    assert client.get(f"/api/sessions/{active}").json()["warnings"] == 2
+
+
+def test_voice_is_noted_in_the_coding_round_but_not_in_a_spoken_one():
+    from app.services.session_store import store
+
+    active = session_id()
+    observe(active, voice_seconds=3, mouth_motion_seconds=0)
+    stored = store.get(active)
+    assert [event["type"] for event in stored.proctor_events] == ["voice_detected"]
+    assert "someone else" in stored.proctor_events[0]["details"]
+    assert stored.warnings == 0
+    observe(active, voice_seconds=0)
+    stored.active_section = "project"
+    observe(active, voice_seconds=4, mouth_motion_seconds=4)
+    assert len(stored.proctor_events) == 1
+
+
+def test_a_still_is_stored_for_its_warning_and_served_back():
+    import base64
+    from io import BytesIO
+    from PIL import Image
+
+    active = session_id()
+    event = client.post(f"/api/sessions/{active}/proctor-events", json={"event_type": "suspicious_phone", "details": "phone"}).json()["event"]
+    still = BytesIO()
+    Image.new("RGB", (640, 480), "gray").save(still, "JPEG")
+    image = "data:image/jpeg;base64," + base64.b64encode(still.getvalue()).decode()
+    assert client.post(f"/api/sessions/{active}/evidence", json={"event_id": event["id"], "image": image}).json() == {"recorded": True}
+    served = client.get(f"/api/sessions/{active}/evidence/{event['id']}")
+    assert served.status_code == 200
+    assert Image.open(BytesIO(served.content)).size == (320, 240)
+    bad = client.post(f"/api/sessions/{active}/evidence", json={"event_id": event["id"], "image": "bm90IGFuIGltYWdl"})
+    assert bad.status_code == 422

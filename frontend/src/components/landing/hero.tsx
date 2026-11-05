@@ -156,8 +156,8 @@ function InterviewStage({ frame }: { frame: Frame }) {
       <div className="flex items-center gap-3 border-t border-line bg-surface-2/60 px-5 py-3 sm:px-6" aria-hidden>
         <span
           className={cx(
-            "flex h-9 items-center gap-2 whitespace-nowrap rounded-lg px-3 text-[13px] font-medium transition-colors duration-300",
-            listening ? "bg-amber-soft text-amber" : "border border-line-strong bg-surface text-ink-2",
+            "flex h-9 items-center gap-2 whitespace-nowrap rounded-lg border px-3 text-[13px] font-medium transition-colors duration-300",
+            listening ? "border-transparent bg-amber-soft text-amber" : "border-line-strong bg-surface text-ink-2",
           )}
         >
           <span className="relative grid place-items-center">

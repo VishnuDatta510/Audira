@@ -165,7 +165,7 @@ function InterviewStage({ frame }: { frame: Frame }) {
             <Mic className="relative size-4" />
           </span>
           {listening ? "Stop speaking" : "Speak answer"}
-          {listening && <VoiceBars on count={5} className="ml-1 h-3.5" />}
+          {listening && <VoiceBars on count={5} className="ml-1 h-3.5 max-sm:hidden" />}
         </span>
         <span className="hidden text-[12.5px] text-ink-3 sm:inline min-[56.25rem]:hidden xl:inline">The transcript stays editable</span>
         <span
@@ -215,7 +215,7 @@ export function Hero() {
   return (
     <section className="relative isolate overflow-hidden">
       <VoiceField level={PHASE_LEVEL[frame.phase]} className="absolute inset-x-0 bottom-0 -z-10 h-28 w-full min-[56.25rem]:h-[19%]" />
-      <div className="mx-auto grid max-w-7xl items-center gap-12 px-5 pb-36 pt-12 sm:px-8 min-[56.25rem]:min-h-[calc(100svh-4rem)] min-[56.25rem]:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] min-[56.25rem]:gap-10 min-[56.25rem]:pb-20 min-[56.25rem]:pt-8 lg:gap-16 lg:pb-32 lg:pt-10">
+      <div className="mx-auto grid max-w-7xl grid-cols-1 items-center gap-12 px-5 pb-36 pt-12 sm:px-8 min-[56.25rem]:min-h-[calc(100svh-4rem)] min-[56.25rem]:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] min-[56.25rem]:gap-10 min-[56.25rem]:pb-20 min-[56.25rem]:pt-8 lg:gap-16 lg:pb-32 lg:pt-10">
         <div>
           <h1 className="text-balance font-display text-[42px] font-semibold leading-[1.02] tracking-[-0.035em] text-ink sm:text-[54px] min-[56.25rem]:text-[41px] lg:text-[54px] xl:text-[64px]">
             {HEADLINE.map((word, i) => (

@@ -569,8 +569,11 @@ dialog.sheet[open]::backdrop {
     opacity: 0;
   }
 }
-.ripple {
-  position: relative;
+/* Layered so a utility like `absolute` can still place it. */
+@layer components {
+  .ripple {
+    position: relative;
+  }
 }
 .ripple::before,
 .ripple::after {
